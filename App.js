@@ -188,47 +188,44 @@ const SwipeableTask = ({
           delayLongPress={400}
           activeOpacity={0.75}
         >
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                styles.taskTitle,
-                isDark ? styles.textDark : styles.textLight,
-                item.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
-              ]}
-              numberOfLines={2}
-            >
-              {item.text}
-            </Text>
+          <Text
+            style={[
+              styles.taskTitle,
+              isDark ? styles.textDark : styles.textLight,
+              item.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
+            ]}
+            numberOfLines={1}
+          >
+            {item.text}
+          </Text>
 
-            {/* Attachment badges if present */}
-            {hasAttachments && (
-              <View style={styles.attachmentBadgesRow}>
-                {item.images && item.images.length > 0 && (
-                  <View style={[styles.miniBadge, isDark ? styles.miniBadgeDark : styles.miniBadgeLight]}>
-                    <Feather name="image" size={11} color={isDark ? '#AAAAAA' : '#666666'} />
-                    <Text style={[styles.miniBadgeText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                      {item.images.length}
-                    </Text>
-                  </View>
-                )}
-                {item.files && item.files.length > 0 && (
-                  <View style={[styles.miniBadge, isDark ? styles.miniBadgeDark : styles.miniBadgeLight]}>
-                    <Feather name="paperclip" size={11} color={isDark ? '#AAAAAA' : '#666666'} />
-                    <Text style={[styles.miniBadgeText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                      {item.files.length}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
+          {/* Compact Inline Media on the right side (keeps card identical in thickness) */}
+          {hasAttachments && (
+            <View style={styles.inlineMediaContainer}>
+              {item.images && item.images.length > 0 && (
+                <View style={styles.inlineThumbWrapper}>
+                  <Image source={{ uri: item.images[0].uri }} style={styles.inlineThumbImg} />
+                  {item.images.length > 1 && (
+                    <View style={styles.inlineMultiBadge}>
+                      <Text style={styles.inlineMultiBadgeText}>+{item.images.length - 1}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {item.files && item.files.length > 0 && (!item.images || item.images.length === 0) && (
+                <View style={[styles.inlineFilePill, isDark ? styles.inlineFileDark : styles.inlineFileLight]}>
+                  <Feather name="paperclip" size={12} color={isDark ? '#FFFFFF' : '#000000'} />
+                </View>
+              )}
+            </View>
+          )}
 
-          {/* Edit hint on long press */}
+          {/* Subtle chevron */}
           <Feather
             name="chevron-right"
             size={16}
             color={isDark ? '#333333' : '#CCCCCC'}
-            style={{ marginLeft: 8 }}
+            style={{ marginLeft: 6 }}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -845,8 +842,9 @@ export default function App() {
                     onPress={() => setAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
                     style={styles.chatThumbDelete}
                     activeOpacity={0.8}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Feather name="x" size={11} color="#FFFFFF" />
+                    <Feather name="x" size={13} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -866,6 +864,7 @@ export default function App() {
                   <TouchableOpacity
                     onPress={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
                     activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Feather name="x" size={13} color="#EF4444" />
                   </TouchableOpacity>
@@ -877,14 +876,18 @@ export default function App() {
 
         {/* The Chat Input Pill */}
         <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
-          {/* Plus Toggle Button (rotates 45 deg smoothly into an X) */}
+          {/* Attachment Toggle Button (Paperclip) */}
           <TouchableOpacity
             onPress={toggleAttachMenu}
             style={[styles.attachToggleBtn, isDark ? styles.attachToggleDark : styles.attachToggleLight]}
             activeOpacity={0.7}
           >
             <Animated.View style={{ transform: [{ rotate: plusRotation }] }}>
-              <Feather name="plus" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+              <Feather
+                name={showAttachMenu ? 'x' : 'paperclip'}
+                size={19}
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
             </Animated.View>
           </TouchableOpacity>
 
@@ -899,25 +902,31 @@ export default function App() {
             style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
           />
 
-          {/* Send / Add Button */}
+          {/* Send Button: Always Arrow-Up, solid when content is present */}
           <TouchableOpacity
             onPress={handleCreateTask}
+            disabled={!inputText.trim() && attachedImages.length === 0 && attachedFiles.length === 0}
             style={[
               styles.addButton,
               isDark ? styles.addButtonDark : styles.addButtonLight,
-              (inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0) &&
-                (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight),
+              (inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0)
+                ? (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight)
+                : (isDark ? styles.addButtonDisabledDark : styles.addButtonDisabledLight),
             ]}
             activeOpacity={0.8}
           >
             <Feather
-              name={
-                inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0
-                  ? 'arrow-up'
-                  : 'plus'
-              }
+              name="arrow-up"
               size={20}
-              color={isDark ? '#000000' : '#FFFFFF'}
+              color={
+                inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0
+                  ? isDark
+                    ? '#000000'
+                    : '#FFFFFF'
+                  : isDark
+                  ? '#666666'
+                  : '#AAAAAA'
+              }
             />
           </TouchableOpacity>
         </View>
@@ -1737,6 +1746,8 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
+    marginRight: 10,
   },
   taskCompletedDark: {
     textDecorationLine: 'line-through',
@@ -1746,29 +1757,55 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: '#999999',
   },
-  attachmentBadgesRow: {
+  inlineMediaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 6,
+    marginLeft: 8,
   },
-  miniBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  inlineThumbWrapper: {
+    position: 'relative',
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    gap: 4,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(128, 128, 128, 0.25)',
   },
-  miniBadgeLight: {
-    backgroundColor: '#F0F0F0',
+  inlineThumbImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
   },
-  miniBadgeDark: {
-    backgroundColor: '#1E1E1E',
+  inlineMultiBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderTopLeftRadius: 5,
   },
-  miniBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+  inlineMultiBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  inlineFilePill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineFileDark: {
+    backgroundColor: '#202020',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  inlineFileLight: {
+    backgroundColor: '#EEEEEE',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
 
   // Empty state
@@ -1889,28 +1926,30 @@ const styles = StyleSheet.create({
   },
   chatThumbWrapper: {
     position: 'relative',
-    width: 58,
-    height: 58,
-    borderRadius: 14,
-    overflow: 'visible',
+    width: 62,
+    height: 62,
+    borderRadius: 15,
+    overflow: 'hidden',
   },
   chatThumbImage: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
+    width: 62,
+    height: 62,
+    borderRadius: 15,
   },
   chatThumbDelete: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#000000',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+    zIndex: 10,
+    elevation: 5,
   },
   chatFileChip: {
     flexDirection: 'row',
@@ -2008,6 +2047,18 @@ const styles = StyleSheet.create({
   addButtonActiveLight: {
     backgroundColor: '#000000',
     transform: [{ scale: 1.05 }],
+  },
+  addButtonDisabledDark: {
+    backgroundColor: '#1C1C1C',
+    borderWidth: 1,
+    borderColor: '#262626',
+    opacity: 0.5,
+  },
+  addButtonDisabledLight: {
+    backgroundColor: '#F2F2F2',
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+    opacity: 0.6,
   },
 
   // Modal Backdrop
