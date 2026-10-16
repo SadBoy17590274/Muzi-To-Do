@@ -16,6 +16,7 @@ import {
   Image,
   ScrollView,
   Easing,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -260,7 +261,7 @@ export default function App() {
   const [attachedImages, setAttachedImages] = useState([]);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const attachMenuOpenRef = useRef(false);
+  const [renderAttachMenu, setRenderAttachMenu] = useState(false);
   const attachMenuAnim = useRef(new Animated.Value(0)).current;
   const plusRotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -394,7 +395,7 @@ export default function App() {
 
   const plusRotation = plusRotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '45deg'],
+    outputRange: ['0deg', '135deg'],
     extrapolate: 'clamp',
   });
 
@@ -452,54 +453,84 @@ export default function App() {
     }
   };
 
+  // Manage Attachment Action Menu Animation & Lifecycle
+  useEffect(() => {
+    if (showAttachMenu) {
+      setRenderAttachMenu(true);
+      Animated.parallel([
+        Animated.timing(attachMenuAnim, {
+          toValue: 1,
+          duration: 280,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(plusRotateAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(attachMenuAnim, {
+          toValue: 0,
+          duration: 240,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(plusRotateAnim, {
+          toValue: 0,
+          duration: 260,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setRenderAttachMenu(false);
+        }
+      });
+    }
+  }, [showAttachMenu]);
+
+  // Ensure icon and popover reset cleanly if app loses/regains focus
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && !showAttachMenu) {
+        plusRotateAnim.setValue(0);
+        attachMenuAnim.setValue(0);
+      }
+    });
+    return () => sub.remove();
+  }, [showAttachMenu]);
+
   // Toggle Attachment Action Menu in Bottom Bar
   const toggleAttachMenu = () => {
-    const nextVal = !attachMenuOpenRef.current;
-    attachMenuOpenRef.current = nextVal;
-    setShowAttachMenu(nextVal);
-    Animated.parallel([
-      Animated.timing(attachMenuAnim, {
-        toValue: nextVal ? 1 : 0,
-        duration: 320,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(plusRotateAnim, {
-        toValue: nextVal ? 1 : 0,
-        duration: 320,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    setShowAttachMenu((prev) => !prev);
   };
 
   const closeAttachMenu = () => {
-    attachMenuOpenRef.current = false;
     setShowAttachMenu(false);
-    Animated.parallel([
-      Animated.timing(attachMenuAnim, {
-        toValue: 0,
-        duration: 280,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(plusRotateAnim, {
-        toValue: 0,
-        duration: 280,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const pickInlineImage = async () => {
     closeAttachMenu();
-    await handlePickImage(false);
+    try {
+      await handlePickImage(false);
+    } finally {
+      plusRotateAnim.setValue(0);
+      attachMenuAnim.setValue(0);
+    }
   };
 
   const pickInlineDocument = async () => {
     closeAttachMenu();
-    await handlePickDocument(false);
+    try {
+      await handlePickDocument(false);
+    } finally {
+      plusRotateAnim.setValue(0);
+      attachMenuAnim.setValue(0);
+    }
   };
 
   // Create Task directly from Chat Input Bar
@@ -779,10 +810,24 @@ export default function App() {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Outside touchable backdrop to close attach menu and rotate back */}
+      {/* Outside touchable backdrop to close attach menu on any tap outside */}
       {showAttachMenu && (
-        <TouchableWithoutFeedback onPress={closeAttachMenu}>
-          <View style={StyleSheet.absoluteFillObject} />
+        <TouchableWithoutFeedback
+          onPress={() => {
+            closeAttachMenu();
+            Keyboard.dismiss();
+          }}
+        >
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                zIndex: 90,
+                elevation: 90,
+                backgroundColor: 'rgba(0,0,0,0.001)', // Android touch hit testing requires non-null background
+              },
+            ]}
+          />
         </TouchableWithoutFeedback>
       )}
 
@@ -796,7 +841,7 @@ export default function App() {
         ]}
       >
         {/* Floating Attachments Menu Popover right above the bar */}
-        {showAttachMenu && (
+        {renderAttachMenu && (
           <Animated.View
             style={[
               styles.attachMenuPopover,
@@ -904,16 +949,24 @@ export default function App() {
 
         {/* The Chat Input Pill */}
         <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
-          {/* Attachment Toggle Button (Paperclip) */}
+          {/* Attachment Toggle Button (+ / X) */}
           <TouchableOpacity
             onPress={toggleAttachMenu}
             style={[styles.attachToggleBtn, isDark ? styles.attachToggleDark : styles.attachToggleLight]}
             activeOpacity={0.7}
           >
-            <Animated.View style={{ transform: [{ rotate: plusRotation }] }}>
+            <Animated.View
+              style={{
+                width: 26,
+                height: 26,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ rotate: plusRotation }],
+              }}
+            >
               <Feather
                 name="plus"
-                size={21}
+                size={22}
                 color={isDark ? '#FFFFFF' : '#000000'}
               />
             </Animated.View>
@@ -925,6 +978,7 @@ export default function App() {
             placeholderTextColor={isDark ? '#777777' : '#999999'}
             value={inputText}
             onChangeText={setInputText}
+            onFocus={closeAttachMenu}
             onSubmitEditing={handleCreateTask}
             returnKeyType="send"
             style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
@@ -2005,7 +2059,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    zIndex: 10,
+    zIndex: 100,
+    elevation: 100,
   },
   inputPill: {
     flexDirection: 'row',
