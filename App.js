@@ -1552,12 +1552,6 @@ export default function App() {
             >
               Nach oben wischen
             </Text>
-            <View
-              style={[
-                styles.swipeUpBar,
-                isDark ? styles.swipeUpBarDark : styles.swipeUpBarLight,
-              ]}
-            />
           </TouchableOpacity>
         </Animated.View>
       </Modal>
@@ -2614,17 +2608,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  swipeUpBar: {
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 6,
-  },
-  swipeUpBarDark: {
-    backgroundColor: '#333333',
-  },
-  swipeUpBarLight: {
-    backgroundColor: '#D4D4D8',
   },
 });
