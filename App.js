@@ -260,6 +260,7 @@ export default function App() {
   const [attachedImages, setAttachedImages] = useState([]);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const attachMenuOpenRef = useRef(false);
   const attachMenuAnim = useRef(new Animated.Value(0)).current;
   const plusRotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -394,6 +395,7 @@ export default function App() {
   const plusRotation = plusRotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '45deg'],
+    extrapolate: 'clamp',
   });
 
   // Pick Images from Gallery
@@ -450,44 +452,44 @@ export default function App() {
     }
   };
 
-  // Toggle Attachment Action Menu in Bottom Bar - soft fluid spring
+  // Toggle Attachment Action Menu in Bottom Bar
   const toggleAttachMenu = () => {
-    const nextVal = !showAttachMenu;
+    const nextVal = !attachMenuOpenRef.current;
+    attachMenuOpenRef.current = nextVal;
     setShowAttachMenu(nextVal);
     Animated.parallel([
-      Animated.spring(attachMenuAnim, {
+      Animated.timing(attachMenuAnim, {
         toValue: nextVal ? 1 : 0,
-        friction: 8,
-        tension: 48,
+        duration: 320,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
-      Animated.spring(plusRotateAnim, {
+      Animated.timing(plusRotateAnim, {
         toValue: nextVal ? 1 : 0,
-        friction: 8,
-        tension: 48,
+        duration: 320,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
     ]).start();
   };
 
   const closeAttachMenu = () => {
-    if (showAttachMenu) {
-      setShowAttachMenu(false);
-      Animated.parallel([
-        Animated.spring(attachMenuAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 48,
-          useNativeDriver: true,
-        }),
-        Animated.spring(plusRotateAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 48,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    attachMenuOpenRef.current = false;
+    setShowAttachMenu(false);
+    Animated.parallel([
+      Animated.timing(attachMenuAnim, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(plusRotateAnim, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const pickInlineImage = async () => {
@@ -776,6 +778,13 @@ export default function App() {
           />
         </View>
       </TouchableWithoutFeedback>
+
+      {/* Outside touchable backdrop to close attach menu and rotate back */}
+      {showAttachMenu && (
+        <TouchableWithoutFeedback onPress={closeAttachMenu}>
+          <View style={StyleSheet.absoluteFillObject} />
+        </TouchableWithoutFeedback>
+      )}
 
       {/* Bottom Chat Input Bar with Inline Attachments and Floating Action Popover */}
       <Animated.View
