@@ -249,7 +249,7 @@ export default function App() {
   const [filter, setFilter] = useState('active'); // 'active' | 'completed' | 'all'
   const [isDark, setIsDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -316,11 +316,9 @@ export default function App() {
       try {
         const storedTasks = await safeStorage.getItem(STORAGE_KEYS.TASKS);
         const storedTheme = await safeStorage.getItem(STORAGE_KEYS.THEME);
-        const storedWelcome = await safeStorage.getItem(STORAGE_KEYS.WELCOME);
 
         if (storedTasks) setTasks(JSON.parse(storedTasks));
         if (storedTheme) setIsDark(storedTheme === 'dark');
-        if (!storedWelcome) setShowWelcome(true);
       } catch (err) {
         console.error('Storage error:', err);
       } finally {
@@ -532,8 +530,7 @@ export default function App() {
     setEditingTask(null);
   };
 
-  const dismissWelcome = async () => {
-    await safeStorage.setItem(STORAGE_KEYS.WELCOME, 'true');
+  const dismissWelcome = () => {
     setShowWelcome(false);
     setTimeout(() => {
       textInputRef.current?.focus();
@@ -1317,6 +1314,26 @@ export default function App() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <View style={styles.navDivider} />
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => {
+              setShowWelcome(true);
+              toggleSidebar(false);
+            }}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="info"
+              size={18}
+              color={isDark ? '#FFFFFF' : '#000000'}
+            />
+            <Text style={[styles.navText, isDark ? styles.textDark : styles.textLight]}>
+              Willkommens-Screen
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Sidebar Footer with Clear Completed */}
@@ -1339,13 +1356,29 @@ export default function App() {
       {/* Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html) */}
       <Modal visible={showWelcome} animationType="fade" transparent={false}>
         <SafeAreaView style={[styles.welcomeContainer, isDark ? styles.bgDark : styles.bgLight]}>
+          <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FAFAFA'} />
+
+          {/* Top Bar mit runder Schließen-Schaltfläche (wie in index.html) */}
+          <View style={styles.welcomeTopBar}>
+            <TouchableOpacity
+              onPress={dismissWelcome}
+              style={[
+                styles.btnCloseWelcome,
+                isDark ? styles.btnCloseWelcomeDark : styles.btnCloseWelcomeLight,
+              ]}
+              activeOpacity={0.7}
+            >
+              <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.aestheticWrapper}>
             <View style={styles.aestheticManifesto}>
               <Text style={[styles.aestheticGreeting, isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight]}>
                 Willkommen.
               </Text>
               <Text style={[styles.aestheticQuote, isDark ? styles.textDark : styles.textLight]}>
-                "Fokus auf das Wesentliche."
+                „Fokus auf das Wesentliche.“
               </Text>
               <Text style={[styles.aestheticSubquote, isDark ? styles.subquoteDark : styles.subquoteLight]}>
                 Deine täglichen Aufgaben klar strukturieren.
@@ -2156,16 +2189,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  navDivider: {
+    height: 1,
+    backgroundColor: 'rgba(128, 128, 128, 0.15)',
+    marginVertical: 10,
+    marginHorizontal: 16,
+  },
+
   // Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html)
   welcomeContainer: {
     flex: 1,
+    justifyContent: 'space-between',
+    paddingBottom: 40,
+  },
+  welcomeTopBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  btnCloseWelcome: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
+  },
+  btnCloseWelcomeDark: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  btnCloseWelcomeLight: {
+    backgroundColor: '#EEEEEE',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   aestheticWrapper: {
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
+    paddingHorizontal: 30,
   },
   aestheticManifesto: {
     marginBottom: 44,
@@ -2173,7 +2239,7 @@ const styles = StyleSheet.create({
   aestheticGreeting: {
     fontSize: 22,
     fontStyle: 'italic',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontFamily: 'serif',
     letterSpacing: -0.2,
     marginBottom: 8,
   },
@@ -2187,7 +2253,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '700',
     fontStyle: 'italic',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontFamily: 'serif',
     lineHeight: 42,
     letterSpacing: -0.5,
     marginBottom: 20,
