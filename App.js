@@ -42,9 +42,24 @@ const safeStorage = {
 };
 
 // =============================================================================
-// Swipeable Task Item (Minimalist: Swipe right to delete, red trash icon only)
+// Swipeable Task Item:
+// - Swipe RIGHT: Delete (Minimalist freestanding red trash icon)
+// - Swipe LEFT: Toggle Completed (Minimalist freestanding check icon)
+// - Tap Task: Edit inline
 // =============================================================================
-const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
+const SwipeableTask = ({
+  item,
+  isDark,
+  onToggle,
+  onDelete,
+  windowWidth,
+  isEditing,
+  editingText,
+  setEditingText,
+  startEditing,
+  saveEditing,
+  cancelEditing,
+}) => {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -52,17 +67,16 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) => {
-        // Only trigger on horizontal swipe to the right
-        return gesture.dx > 10 && Math.abs(gesture.dy) < 15;
+        // Only trigger on horizontal swipe when not editing
+        if (isEditing) return false;
+        return Math.abs(gesture.dx) > 12 && Math.abs(gesture.dy) < 15;
       },
       onPanResponderMove: (_, gesture) => {
-        if (gesture.dx > 0) {
-          pan.setValue({ x: gesture.dx, y: 0 });
-        }
+        pan.setValue({ x: gesture.dx, y: 0 });
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > 120) {
-          // Swipe threshold reached: animate out and delete
+        if (gesture.dx > 110) {
+          // Swipe RIGHT -> Delete task
           Animated.parallel([
             Animated.timing(pan.x, {
               toValue: windowWidth || 400,
@@ -77,12 +91,21 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
           ]).start(() => {
             onDelete(item.id);
           });
+        } else if (gesture.dx < -100) {
+          // Swipe LEFT -> Mark as completed / Toggle completed
+          onToggle(item.id);
+          Animated.spring(pan.x, {
+            toValue: 0,
+            friction: 7,
+            tension: 55,
+            useNativeDriver: true,
+          }).start();
         } else {
           // Snap back
           Animated.spring(pan.x, {
             toValue: 0,
             friction: 7,
-            tension: 50,
+            tension: 55,
             useNativeDriver: true,
           }).start();
         }
@@ -90,18 +113,47 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
     })
   ).current;
 
+  // Red trash icon animation (swipe right)
   const trashScale = pan.x.interpolate({
-    inputRange: [0, 50, 120],
-    outputRange: [0.6, 1, 1.25],
+    inputRange: [0, 40, 110],
+    outputRange: [0.5, 0.9, 1.25],
+    extrapolate: 'clamp',
+  });
+  const trashOpacity = pan.x.interpolate({
+    inputRange: [0, 20, 60],
+    outputRange: [0, 0.6, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Green checkmark icon animation (swipe left)
+  const completeScale = pan.x.interpolate({
+    inputRange: [-110, -40, 0],
+    outputRange: [1.25, 0.9, 0.5],
+    extrapolate: 'clamp',
+  });
+  const completeOpacity = pan.x.interpolate({
+    inputRange: [-60, -20, 0],
+    outputRange: [1, 0.6, 0],
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.swipeRowContainer}>
-      {/* Freistehendes rotes Mülleimer-Icon (kein Kasten, minimalistisch) */}
+      {/* Freistehendes rotes Mülleimer-Icon (links, beim Nach-Rechts-Wischen) */}
       <View style={styles.trashBackground}>
-        <Animated.View style={{ transform: [{ scale: trashScale }] }}>
+        <Animated.View style={{ transform: [{ scale: trashScale }], opacity: trashOpacity }}>
           <Feather name="trash-2" size={24} color="#EF4444" />
+        </Animated.View>
+      </View>
+
+      {/* Freistehendes Erledigt-Icon (rechts, beim Nach-Links-Wischen) */}
+      <View style={styles.completeBackground}>
+        <Animated.View style={{ transform: [{ scale: completeScale }], opacity: completeOpacity }}>
+          <Feather
+            name="check-circle"
+            size={24}
+            color={item.completed ? '#888888' : '#10B981'}
+          />
         </Animated.View>
       </View>
 
@@ -113,6 +165,7 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
         ]}
         {...panResponder.panHandlers}
       >
+        {/* Checkbox */}
         <TouchableOpacity
           onPress={() => onToggle(item.id)}
           style={[
@@ -127,21 +180,55 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.taskTextWrapper}
-          onPress={() => onToggle(item.id)}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.taskTitle,
-              isDark ? styles.textDark : styles.textLight,
-              item.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
-            ]}
+        {/* Task Content: Inline Editing or Text Display */}
+        {isEditing ? (
+          <View style={styles.inlineEditWrapper}>
+            <TextInput
+              value={editingText}
+              onChangeText={setEditingText}
+              onSubmitEditing={saveEditing}
+              returnKeyType="done"
+              autoFocus
+              style={[styles.inlineEditInput, isDark ? styles.textDark : styles.textLight]}
+            />
+            <TouchableOpacity
+              onPress={saveEditing}
+              style={[styles.editActionBtn, isDark ? styles.editSaveBtnDark : styles.editSaveBtnLight]}
+              activeOpacity={0.8}
+            >
+              <Feather name="check" size={16} color={isDark ? '#000000' : '#FFFFFF'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={cancelEditing}
+              style={[styles.editActionBtn, isDark ? styles.editCancelBtnDark : styles.editCancelBtnLight]}
+              activeOpacity={0.8}
+            >
+              <Feather name="x" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.taskTextWrapper}
+            onPress={() => startEditing(item)}
+            activeOpacity={0.7}
           >
-            {item.text}
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.taskTitle,
+                isDark ? styles.textDark : styles.textLight,
+                item.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
+              ]}
+            >
+              {item.text}
+            </Text>
+            <Feather
+              name="edit-2"
+              size={13}
+              color={isDark ? '#444444' : '#BBBBBB'}
+              style={{ marginLeft: 8 }}
+            />
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </View>
   );
@@ -163,6 +250,10 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Edit Task State
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingText, setEditingText] = useState('');
 
   const textInputRef = useRef(null);
 
@@ -301,6 +392,29 @@ export default function App() {
     setTasks((prev) => prev.filter((t) => !t.completed));
   };
 
+  // Edit Task handlers
+  const startEditing = (task) => {
+    setEditingTaskId(task.id);
+    setEditingText(task.text);
+  };
+
+  const saveEditing = () => {
+    if (!editingTaskId) return;
+    const trimmed = editingText.trim();
+    if (trimmed) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === editingTaskId ? { ...t, text: trimmed } : t))
+      );
+    }
+    setEditingTaskId(null);
+    setEditingText('');
+  };
+
+  const cancelEditing = () => {
+    setEditingTaskId(null);
+    setEditingText('');
+  };
+
   const dismissWelcome = async () => {
     await safeStorage.setItem(STORAGE_KEYS.WELCOME, 'true');
     setShowWelcome(false);
@@ -386,8 +500,14 @@ export default function App() {
         </View>
       </View>
 
-      {/* Task List (Dismiss keyboard on scroll/tap) */}
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      {/* Task List (Dismiss keyboard on tap outside input) */}
+      <TouchableWithoutFeedback
+        onPress={() => {
+          Keyboard.dismiss();
+          if (editingTaskId) cancelEditing();
+        }}
+        accessible={false}
+      >
         <View style={{ flex: 1 }}>
           <FlatList
             data={filteredTasks}
@@ -400,6 +520,12 @@ export default function App() {
                 onToggle={toggleTask}
                 onDelete={deleteTask}
                 windowWidth={windowWidth}
+                isEditing={editingTaskId === item.id}
+                editingText={editingText}
+                setEditingText={setEditingText}
+                startEditing={startEditing}
+                saveEditing={saveEditing}
+                cancelEditing={cancelEditing}
               />
             )}
             contentContainerStyle={[
@@ -901,6 +1027,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     zIndex: 1,
   },
+  completeBackground: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 20,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -945,10 +1080,14 @@ const styles = StyleSheet.create({
   },
   taskTextWrapper: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   taskTitle: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
   },
   taskCompletedDark: {
     textDecorationLine: 'line-through',
@@ -957,6 +1096,43 @@ const styles = StyleSheet.create({
   taskCompletedLight: {
     textDecorationLine: 'line-through',
     color: '#999999',
+  },
+
+  // Inline Editing
+  inlineEditWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inlineEditInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#888888',
+  },
+  editActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editSaveBtnLight: {
+    backgroundColor: '#000000',
+  },
+  editSaveBtnDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  editCancelBtnLight: {
+    backgroundColor: '#EEEEEE',
+  },
+  editCancelBtnDark: {
+    backgroundColor: '#262626',
   },
 
   // Empty state
