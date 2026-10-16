@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Minimal To-Do • Android</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Android Smartphone Frame -->
+  <div class="mobile-frame-container">
+    <div class="phone-frame android-frame">
+      
+      <!-- Android Punch-Hole Kamera (Zentrierte Frontkamera) -->
+      <div class="android-camera-hole"></div>
+
+      <!-- Android Status Bar -->
+      <div class="phone-status-bar android-status-bar">
+        <span class="status-time" id="status-time">18:57</span>
+        <div class="status-icons">
+          <!-- Android WiFi -->
+          <svg width="16" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3.3c3.8 0 7.23 1.5 9.77 3.97L12 19.3 2.23 11.27C4.77 8.8 8.2 7.3 12 7.3z"/>
+          </svg>
+          <!-- Android Mobilfunk Signal -->
+          <svg width="15" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 22h20V2L2 22zm18-2H6.83L20 6.83V20z"/>
+          </svg>
+          <!-- Android Akku Symbol -->
+          <svg width="12" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Backdrop für mobile Seitenleiste -->
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+      <!-- Abgerundete mobile Seitenleiste (Drawer) -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <!-- Runder Hell/Dunkel Modus Icon-Button (Nur das Icon) -->
+          <button class="theme-toggle-btn" id="theme-toggle-btn" title="Erscheinungsbild wechseln" aria-label="Erscheinungsbild wechseln">
+            <!-- Sonnensymbol (Hell) -->
+            <svg class="theme-icon sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <!-- Mondsymbol (Dunkel) -->
+            <svg class="theme-icon moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+
+          <button class="btn-close-sidebar" id="close-sidebar-btn" title="Menü schließen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Navigation Filter -->
+        <nav class="sidebar-nav">
+          <span class="nav-label">Übersicht</span>
+          <button class="nav-item active" data-filter="active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Offene Aufgaben</span>
+            <span class="badge" id="count-active">0</span>
+          </button>
+
+          <button class="nav-item" data-filter="completed">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Erledigt</span>
+            <span class="badge" id="count-completed">0</span>
+          </button>
+
+          <button class="nav-item" data-filter="all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+            </svg>
+            <span>Alle anzeigen</span>
+            <span class="badge" id="count-all">0</span>
+          </button>
+        </nav>
+
+        <!-- Abgerundetes Fortschritts-Widget -->
+        <div class="sidebar-widget">
+          <div class="widget-title">
+            <span>Dein Fortschritt</span>
+            <span id="progress-percent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+          </div>
+          <p class="widget-subtitle" id="progress-text">0 von 0 erledigt</p>
+        </div>
+
+        <!-- Sidebar Footer Action -->
+        <div class="sidebar-footer">
+          <button class="btn-clear-completed" id="clear-completed-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Erledigte aufräumen</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ===================================================================
+           WILLKOMMENS-SCREEN (Erstes Anmelden oder jederzeit wieder aufrufbar)
+           =================================================================== -->
+      <section class="welcome-screen" id="welcome-screen">
+        <div class="aesthetic-welcome-wrapper">
+          <!-- Typografie mit genau 2 Schriftarten -->
+          <div class="aesthetic-manifesto">
+            <!-- Schriftart 1: Playfair Display Italic (Klassisch & Inspirierend) -->
+            <span class="aesthetic-greeting font-serif">Willkommen.</span>
+            <h1 class="aesthetic-quote font-serif">„Fokus auf das Wesentliche.“</h1>
+
+            <!-- Schriftart 2: Plus Jakarta Sans (Klar & Modern) -->
+            <p class="aesthetic-subquote font-sans">Deine täglichen Aufgaben klar strukturieren.</p>
+
+            <!-- Schriftart 2: Plus Jakarta Sans (Dezent & Minimalistisch) -->
+            <p class="aesthetic-tertiary font-sans">Schnelle Erfassung ohne Überfluss.</p>
+          </div>
+
+          <!-- Direkt da drunter der Button: Jetzt starten -->
+          <div class="aesthetic-action">
+            <button class="btn-start-aesthetic font-sans" id="start-app-btn">
+              <span id="start-btn-label">Jetzt starten</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           HAUPT-BILDSCHIRM (Aufgaben)
+           =================================================================== -->
+      <main class="mobile-screen-content" id="main-app-content">
+        <!-- Top App Bar -->
+        <header class="mobile-top-bar">
+          <button class="btn-icon" id="open-sidebar-btn" title="Menü öffnen" aria-label="Menü">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="mobile-bar-title">
+            <h1 id="page-title">Aufgaben</h1>
+            <span class="date-display" id="date-display"></span>
+          </div>
+
+          <!-- Leerer Platzhalter für zentrierten Titel -->
+          <div class="top-bar-spacer" aria-hidden="true"></div>
+        </header>
+
+        <!-- Suchleiste -->
+        <div class="search-container">
+          <div class="search-bar">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="search-input" placeholder="Aufgaben durchsuchen..." autocomplete="off">
+            <button class="btn-clear-search hidden" id="clear-search-btn" title="Suche löschen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Diskrete Meta-Zeile (Keine doppelten Buttons mehr auf dem Hauptscreen) -->
+        <div class="list-meta-bar">
+          <span class="meta-filter-tag font-mono" id="meta-filter-tag">OFFEN</span>
+          <span class="meta-count font-sans" id="results-count">0 Aufgaben</span>
+        </div>
+
+        <!-- Aufgabenliste Scrollbereich -->
+        <div class="task-scroll-area">
+          <ul class="task-list" id="task-list">
+            <!-- Dynamisch generiert -->
+          </ul>
+
+          <!-- Leer-Zustand -->
+          <div class="empty-state hidden" id="empty-state">
+            <div class="empty-icon">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+              </svg>
+            </div>
+            <h3 id="empty-title">Keine Aufgaben vorhanden</h3>
+            <p id="empty-subtitle">Deine Liste ist leer. Tippe unten auf das Eingabefeld, um deine erste Aufgabe zu erstellen.</p>
+          </div>
+        </div>
+
+        <!-- Mobile Schnelleingabe unten (Daumenfreundlich) -->
+        <div class="mobile-bottom-bar" id="mobile-bottom-bar">
+          <form id="add-form" class="add-form" novalidate>
+            <div class="input-wrapper" id="input-wrapper">
+              <input 
+                type="text" 
+                id="task-input" 
+                placeholder="Neue Aufgabe eingeben..." 
+                autocomplete="off"
+              >
+              <button type="submit" class="btn-add" id="add-btn" title="Hinzufügen">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+          </form>
+          <!-- Android Gesture Navigation Bar -->
+          <div class="android-gesture-bar"></div>
+        </div>
+
+        <!-- Android Virtuelle Tastatur (Gboard Style für Desktop-Vorschau) -->
+        <div class="android-keyboard" id="android-keyboard" aria-hidden="true">
+          <!-- Reihe 1 -->
+          <div class="kb-row">
+            <button type="button" class="kb-key" data-char="q">q</button>
+            <button type="button" class="kb-key" data-char="w">w</button>
+            <button type="button" class="kb-key" data-char="e">e</button>
+            <button type="button" class="kb-key" data-char="r">r</button>
+            <button type="button" class="kb-key" data-char="t">t</button>
+            <button type="button" class="kb-key" data-char="z">z</button>
+            <button type="button" class="kb-key" data-char="u">u</button>
+            <button type="button" class="kb-key" data-char="i">i</button>
+            <button type="button" class="kb-key" data-char="o">o</button>
+            <button type="button" class="kb-key" data-char="p">p</button>
+          </div>
+          <!-- Reihe 2 -->
+          <div class="kb-row">
+            <button type="button" class="kb-key" data-char="a">a</button>
+            <button type="button" class="kb-key" data-char="s">s</button>
+            <button type="button" class="kb-key" data-char="d">d</button>
+            <button type="button" class="kb-key" data-char="f">f</button>
+            <button type="button" class="kb-key" data-char="g">g</button>
+            <button type="button" class="kb-key" data-char="h">h</button>
+            <button type="button" class="kb-key" data-char="j">j</button>
+            <button type="button" class="kb-key" data-char="k">k</button>
+            <button type="button" class="kb-key" data-char="l">l</button>
+          </div>
+          <!-- Reihe 3 -->
+          <div class="kb-row">
+            <button type="button" class="kb-key kb-key-action kb-key-shift" id="kb-shift" title="Groß-/Kleinschreibung">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 4L4 14h5v6h6v-6h5L12 4z"/>
+              </svg>
+            </button>
+            <button type="button" class="kb-key" data-char="y">y</button>
+            <button type="button" class="kb-key" data-char="x">x</button>
+            <button type="button" class="kb-key" data-char="c">c</button>
+            <button type="button" class="kb-key" data-char="v">v</button>
+            <button type="button" class="kb-key" data-char="b">b</button>
+            <button type="button" class="kb-key" data-char="n">n</button>
+            <button type="button" class="kb-key" data-char="m">m</button>
+            <button type="button" class="kb-key kb-key-action kb-key-backspace" id="kb-backspace" title="Löschen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                <line x1="18" y1="9" x2="12" y2="15"></line>
+                <line x1="12" y1="9" x2="18" y2="15"></line>
+              </svg>
+            </button>
+          </div>
+          <!-- Reihe 4 -->
+          <div class="kb-row">
+            <button type="button" class="kb-key kb-key-action kb-key-sym" id="kb-hide" title="Tastatur schließen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <button type="button" class="kb-key kb-key-space" id="kb-space">Leerzeichen</button>
+            <button type="button" class="kb-key kb-key-action kb-key-enter" id="kb-enter" title="Aufgabe hinzufügen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+          <!-- Gestenleiste unten an der Tastatur -->
+          <div class="android-gesture-bar kb-gesture-bar"></div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

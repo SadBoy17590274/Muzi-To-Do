@@ -1,0 +1,1586 @@
+/* ==========================================================================
+   Design System: Android Mobile UI (Weiß & Schwarz, Abgerundete Ecken)
+   ========================================================================== */
+
+:root {
+  --bg-desktop: #000000;
+  --bg-phone: #ffffff;
+  --bg-secondary: #f4f4f6;
+  --bg-card: #ffffff;
+  
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  
+  --border-color: #ebebeb;
+  --border-strong: #000000;
+  
+  --accent-black: #000000;
+  --accent-white: #ffffff;
+  
+  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-full: 9999px;
+
+  --shadow-phone: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 10px #1c1c1e, 0 0 0 13px #2c2c2e;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
+  --shadow-elevated: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Dunkelmodus / Dark Theme (Pures Schwarz-Weiß mit abgerundetem Design)
+   ========================================================================== */
+body.dark-theme {
+  --bg-desktop: #000000;
+  --bg-phone: #000000;
+  --bg-secondary: #121214;
+  --bg-card: #000000;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  
+  --border-color: #222226;
+  --border-strong: #ffffff;
+  
+  --accent-black: #ffffff;
+  --accent-white: #000000;
+  
+  --shadow-phone: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 0 10px #141416, 0 0 0 13px #222226;
+  --shadow-card: none;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+*:focus,
+*:focus-visible {
+  outline: none !important;
+}
+
+/* Verhindert gelbe Browser Autofill- und Validierungs-Ränder */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-secondary) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-desktop);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 16px;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background-color 0.22s ease, color 0.22s ease;
+}
+
+/* Fließende Farb-Übergänge für alle Komponenten beim Umschalten */
+.phone-frame,
+.welcome-screen,
+.task-item,
+.input-wrapper,
+.search-bar,
+.sidebar-widget,
+.nav-item,
+.btn-icon,
+.mobile-bottom-bar,
+.meta-filter-tag {
+  transition: background-color 0.22s ease,
+              border-color 0.22s ease,
+              color 0.22s ease;
+}
+
+.phone-status-bar,
+.mobile-top-bar,
+.status-icons,
+.mobile-bar-title h1,
+.mobile-bar-title .date-display {
+  transition: color 0.22s ease;
+}
+
+/* Smartphone Container Wrapper */
+.mobile-frame-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Android Smartphone Gehäuse (Google Pixel Style)
+   ========================================================================== */
+.phone-frame.android-frame {
+  width: 100%;
+  max-width: 412px;
+  height: 850px;
+  background-color: var(--bg-phone);
+  border-radius: 46px;
+  box-shadow: var(--shadow-phone);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 4px solid #1a1a1a;
+}
+
+/* Android Punch-Hole Frontkamera (Klassisches Android-Loch im Display) */
+.android-camera-hole {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 13px;
+  height: 13px;
+  background-color: #0d0d11;
+  border-radius: 50%;
+  z-index: 100;
+  border: 1px solid #222226;
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+/* Android Status Bar */
+.phone-status-bar.android-status-bar {
+  height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px 0 24px;
+  background-color: transparent;
+  z-index: 90;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   WILLKOMMENS-SCREEN (Erstes Anmelden / Onboarding)
+   ========================================================================== */
+.welcome-screen {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 44px);
+  background-color: var(--bg-phone);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px 22px 30px 22px;
+  animation: fadeIn 0.35s ease forwards;
+}
+
+.welcome-screen.closing {
+  animation: fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.welcome-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.btn-close-welcome {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-close-welcome:hover {
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+  border-color: var(--accent-black);
+}
+
+/* ==========================================================================
+   Typografie-Klassen für 3 verschiedene Schriftarten (Ästhetik)
+   ========================================================================== */
+.font-serif {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ==========================================================================
+   Ästhetischer Minimal-Willkommens-Screen
+   ========================================================================== */
+.aesthetic-welcome-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px 40px 10px;
+}
+
+.aesthetic-manifesto {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+/* Schrift 1: Playfair Display Italic (Begrüßung) */
+.aesthetic-greeting {
+  font-size: 1.35rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  display: block;
+  opacity: 0;
+  animation: aestheticReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.08s forwards;
+}
+
+/* Schrift 1: Playfair Display Italic (Groß, Ästhetisch & Inspirierend) */
+.aesthetic-quote {
+  font-size: 2.35rem;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent-black);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+  opacity: 0;
+  animation: aestheticReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards;
+}
+
+/* Schrift 2: Plus Jakarta Sans (Klar, Ruhig & Strukturiert) */
+.aesthetic-subquote {
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+  letter-spacing: -0.015em;
+  margin-bottom: 8px;
+  opacity: 0;
+  animation: aestheticReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
+}
+
+/* Schrift 2: Plus Jakarta Sans (Dezente Nuance, minimale Eleganz) */
+.aesthetic-tertiary {
+  font-size: 0.94rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  opacity: 0;
+  animation: aestheticReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+/* Direkt darunter: Ästhetischer Start-Button */
+.aesthetic-action {
+  margin-top: 48px;
+  opacity: 0;
+  animation: springPopIn 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 0.65s forwards;
+}
+
+.btn-start-aesthetic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 17px 28px;
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 1.02rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22);
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-start-aesthetic svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-start-aesthetic:hover svg {
+  transform: translateX(4px);
+}
+
+.btn-start-aesthetic:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+.btn-start-aesthetic:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ==========================================================================
+   Abgerundete Seitenleiste (Drawer mit abgerundeten Ecken)
+   ========================================================================== */
+.sidebar-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.dark-theme .sidebar-backdrop {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 82%;
+  max-width: 330px;
+  height: 100%;
+  background-color: var(--bg-phone);
+  border-top-right-radius: 36px;
+  border-bottom-right-radius: 36px;
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 20px 24px 20px;
+  box-shadow: 10px 0 35px rgba(0, 0, 0, 0.2);
+  transform: translateX(-100%);
+  transition: transform 0.38s cubic-bezier(0.2, 0.9, 0.3, 1),
+              background-color 0.22s ease,
+              border-color 0.22s ease;
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* Gestaffelter Einschub der Menüpunkte bei geöffneter Seitenleiste */
+.sidebar.open .nav-item:nth-of-type(1) {
+  animation: sidebarItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.06s backwards;
+}
+.sidebar.open .nav-item:nth-of-type(2) {
+  animation: sidebarItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.12s backwards;
+}
+.sidebar.open .nav-item:nth-of-type(3) {
+  animation: sidebarItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.18s backwards;
+}
+.sidebar.open .sidebar-widget {
+  animation: sidebarItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.24s backwards;
+}
+.sidebar.open .sidebar-footer {
+  animation: sidebarItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.30s backwards;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Runder Hell/Dunkel Modus Icon-Button (Nur das Icon) */
+.theme-toggle-btn {
+  width: 38px;
+  height: 38px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  position: relative;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.22s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.theme-toggle-btn:hover {
+  background-color: #ebebee;
+  transform: scale(1.08);
+}
+
+body.dark-theme .theme-toggle-btn:hover {
+  background-color: #222226;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+.theme-icon {
+  position: absolute;
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.22s ease;
+}
+
+.sun-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.moon-icon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.3);
+}
+
+body.dark-theme .sun-icon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.3);
+}
+
+body.dark-theme .moon-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.btn-close-sidebar {
+  margin-left: auto;
+  background: var(--bg-secondary);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+}
+
+.btn-close-sidebar:hover {
+  background-color: #e5e5e7;
+  transform: scale(1.08);
+}
+
+body.dark-theme .btn-close-sidebar:hover {
+  background-color: #222226;
+}
+
+.btn-close-sidebar:active {
+  transform: scale(0.9);
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.nav-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  padding: 0 12px 6px 12px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease,
+              color 0.2s ease,
+              box-shadow 0.2s ease;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transform: translateX(4px);
+}
+
+.nav-item:active {
+  transform: scale(0.96) translateX(2px);
+}
+
+.nav-item.active {
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.nav-item.active:hover {
+  transform: translateX(4px);
+}
+
+.nav-item .badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-item.active .badge {
+  background-color: rgba(255, 255, 255, 0.22);
+  color: var(--accent-white);
+}
+
+body.dark-theme .nav-item.active .badge {
+  background-color: rgba(0, 0, 0, 0.18);
+  color: #000000;
+}
+
+/* Sidebar Fortschritt mit fließendem Schimmer-Effekt */
+.sidebar-widget {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sidebar-widget:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.widget-title {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#progress-percent {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--accent-black);
+  border-radius: var(--radius-full);
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: barShimmer 2.2s infinite;
+}
+
+.widget-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-clear-completed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease;
+}
+
+.btn-clear-completed:hover {
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+  border-color: var(--accent-black);
+  transform: translateY(-2px);
+}
+
+.btn-clear-completed:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   Haupt-App-Bereich (Aufgaben)
+   ========================================================================== */
+.mobile-screen-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+/* Mobile Top Bar */
+.mobile-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 10px 20px;
+  background-color: transparent;
+}
+
+.btn-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+}
+
+.btn-icon:hover {
+  background-color: #ebebee;
+  transform: scale(1.06);
+}
+
+body.dark-theme .btn-icon:hover {
+  background-color: #222226;
+}
+
+.btn-icon:active {
+  transform: scale(0.9);
+}
+
+.top-bar-spacer {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.mobile-bar-title {
+  text-align: center;
+}
+
+.mobile-bar-title h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mobile-bar-title .date-display {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+/* Suchleiste */
+.search-container {
+  padding: 4px 20px 8px 20px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  position: relative;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  padding: 0 14px;
+  height: 42px;
+  border: 1.5px solid transparent;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-black);
+  background-color: var(--bg-phone);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.search-icon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.search-bar input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.search-bar input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.btn-clear-search {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+}
+
+.btn-clear-search:hover {
+  color: var(--text-primary);
+  transform: scale(1.15);
+}
+
+/* Diskrete Meta-Zeile */
+.list-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 24px 10px 24px;
+}
+
+.meta-filter-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  text-transform: uppercase;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+  display: inline-block;
+}
+
+.meta-count {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+/* Aufgaben-Scrollbereich */
+.task-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 20px 96px 20px;
+  -webkit-overflow-scrolling: touch;
+  transition: padding-bottom 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.phone-frame.keyboard-open .task-scroll-area {
+  padding-bottom: 340px;
+}
+
+.task-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Swipe-Container für Aufgabenkarten mit abgerundeten Ecken */
+.task-swipe-wrapper {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: taskSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  will-change: transform, opacity;
+}
+
+/* Minimalistischer Lösch-Hintergrund: Komplett transparent, keine extra Schaltfläche oder Kasten */
+.swipe-delete-background {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  z-index: 1;
+}
+
+body.dark-theme .swipe-delete-background {
+  background: transparent;
+  border: none;
+}
+
+/* Freistehendes, reines Lösch-Icon ohne farbige Umrandung oder Kasten */
+.swipe-delete-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: #ef4444;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.swipe-delete-indicator svg {
+  stroke: #ef4444;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.2s ease;
+}
+
+.swipe-delete-indicator.ready {
+  opacity: 1 !important;
+  transform: scale(1.22) !important;
+  background: transparent !important;
+}
+
+.swipe-delete-indicator.ready svg {
+  stroke: #ff3b30;
+}
+
+/* Aufgabenkarte: Reagiert auf Fingerwisch nach rechts, keine Mülltonne mehr */
+.task-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.task-item.swiping {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #d0d0d5;
+}
+
+body.dark-theme .task-item.swiping {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border-color: #383842;
+}
+
+.task-item:hover:not(.swiping) {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border-color: #d8d8d8;
+}
+
+body.dark-theme .task-item:hover:not(.swiping) {
+  border-color: #383842;
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Runder benutzerdefinierter Checkbox: Federnd, mit haptischem Feedback */
+.custom-checkbox {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--accent-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.25s ease;
+  background-color: transparent;
+}
+
+.custom-checkbox:hover {
+  transform: scale(1.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.custom-checkbox:active {
+  transform: scale(0.88);
+}
+
+.custom-checkbox svg {
+  opacity: 0;
+  transform: scale(0.2) rotate(-25deg);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+  stroke: var(--accent-white);
+}
+
+.task-item.completed .custom-checkbox {
+  background-color: var(--accent-black);
+  border-color: var(--accent-black);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.task-item.completed .custom-checkbox svg {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.task-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.task-title {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.35;
+  word-break: break-word;
+  transition: color 0.28s ease, opacity 0.28s ease;
+}
+
+.task-item.completed .task-title {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+  opacity: 0.65;
+}
+
+.task-date {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+/* Leer-Zustand (Leere App) mit sanfter Schwebung */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 18px;
+  text-align: center;
+  margin-top: 10px;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.empty-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  animation: gentleFloat 3.8s ease-in-out infinite;
+}
+
+.empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 270px;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Mobile Bottom Bar (Unten fixierte Schnelleingabe)
+   ========================================================================== */
+.mobile-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: var(--bg-phone);
+  padding: 10px 18px 12px 18px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s ease;
+}
+
+.phone-frame.keyboard-open .mobile-bottom-bar {
+  transform: translateY(-252px);
+}
+
+.phone-frame.keyboard-open .mobile-bottom-bar .android-gesture-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.add-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 5px 6px 5px 18px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
+  transition: background-color 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.22s ease,
+              transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.dark-theme .input-wrapper {
+  box-shadow: none;
+}
+
+.input-wrapper:focus-within {
+  background-color: var(--bg-phone);
+  border-color: var(--accent-black);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.input-wrapper input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none !important;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.input-wrapper input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Dynamischer Hinzufügen-Button: Dreht sich und pulsiert bei Texteingabe */
+.btn-add {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease,
+              box-shadow 0.3s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  outline: none !important;
+}
+
+.btn-add:hover {
+  transform: scale(1.08);
+}
+
+.btn-add.ready {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.35);
+}
+
+.btn-add.ready:hover {
+  transform: scale(1.18) rotate(90deg);
+}
+
+.btn-add:active {
+  transform: scale(0.9);
+}
+
+.btn-add.ready:active {
+  transform: scale(0.92) rotate(90deg);
+}
+
+/* Android Gesture Bar */
+.android-gesture-bar {
+  width: 72px;
+  height: 4px;
+  background-color: var(--text-primary);
+  border-radius: var(--radius-full);
+  margin-top: 10px;
+  opacity: 0.85;
+  transition: background-color 0.22s ease, opacity 0.2s ease;
+}
+
+/* ==========================================================================
+   Android Virtuelle Tastatur (Gboard Style)
+   ========================================================================== */
+.android-keyboard {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 252px;
+  background-color: var(--bg-phone);
+  border-top: 1px solid var(--border-color);
+  padding: 8px 6px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 55;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s ease,
+              border-color 0.22s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.phone-frame.keyboard-open .android-keyboard {
+  transform: translateY(0);
+}
+
+.kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.kb-key {
+  flex: 1;
+  height: 40px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.08s ease, background-color 0.12s ease;
+  touch-action: manipulation;
+  outline: none !important;
+}
+
+.kb-key:active {
+  transform: scale(0.92);
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+}
+
+.kb-key-action {
+  flex: 1.35;
+  background-color: var(--border-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.kb-key-action.active {
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+}
+
+.kb-key-space {
+  flex: 5.5;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.kb-key-enter {
+  flex: 1.6;
+  background-color: var(--accent-black);
+  color: var(--accent-white);
+}
+
+.kb-key-enter:hover {
+  opacity: 0.92;
+}
+
+.kb-key-enter:active {
+  transform: scale(0.92);
+}
+
+.kb-gesture-bar {
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+/* Subtiler Shake bei leerem Absenden */
+@keyframes inputShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.input-wrapper.shake {
+  animation: inputShake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-color: #ef4444 !important;
+}
+
+/* Auf echten Smartphones mit nativer Tastatur die simulierte Tastatur ausblenden */
+@media (max-width: 500px) {
+  .android-keyboard {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Animationen & Keyframes
+   ========================================================================== */
+.hidden {
+  display: none !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* Sanfter Wellen-Einschub von Aufgabenkarten */
+@keyframes taskSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.008);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Federnde Karten-Einfahrt bei neuer Aufgabe */
+@keyframes taskSpringIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.02);
+  }
+  80% {
+    transform: translateY(-2px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.task-swipe-wrapper.spring-in,
+.task-item.spring-in {
+  animation: taskSpringIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+/* Flüssiges Zusammenklappen beim Löschen */
+@keyframes taskCollapse {
+  0% {
+    opacity: 1;
+    max-height: 80px;
+    margin-bottom: 0;
+  }
+  40% {
+    opacity: 0;
+    max-height: 80px;
+  }
+  100% {
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: -10px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-color: transparent;
+  }
+}
+
+.task-swipe-wrapper.deleting,
+.task-item.deleting {
+  animation: taskCollapse 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Haptischer Checkbox Bounce & Ripple */
+@keyframes checkBounce {
+  0% { transform: scale(0.7); }
+  50% { transform: scale(1.3); }
+  75% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes checkRipple {
+  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.35); }
+  100% { box-shadow: 0 0 0 12px rgba(0, 0, 0, 0); }
+}
+
+.custom-checkbox.bouncing {
+  animation: checkBounce 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+             checkRipple 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Menüpunkt Einschub in der Seitenleiste */
+@keyframes sidebarItemIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Schimmernde Welle über den Fortschrittsbalken */
+@keyframes barShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Impuls für Meta-Tags und Fortschrittszahlen */
+@keyframes tagPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.meta-filter-tag.pop,
+#progress-percent.pop {
+  animation: tagPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Sanftes Schweben des Leer-Symbols */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Ästhetischer Reveal für den Willkommens-Screen */
+@keyframes aestheticReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Federnder Button Pop-In */
+@keyframes springPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Mikro-Konfetti / Partikel-Burst in Monochrom mit Dreh-Physik */
+.micro-particle {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 9999;
+  animation: particleBurst 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes particleBurst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.2);
+  }
+}
+
+/* ==========================================================================
+   Echtes Mobilgerät: 100% Fullscreen Ansicht ohne Rahmen
+   ========================================================================== */
+@media (max-width: 500px), (max-height: 850px) and (max-width: 768px) {
+  body {
+    padding: 0;
+    background-color: var(--bg-phone);
+  }
+
+  .phone-frame.android-frame {
+    max-width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .android-camera-hole {
+    display: none;
+  }
+
+  .phone-status-bar {
+    display: none;
+  }
+
+  .sidebar {
+    padding-top: 24px;
+  }
+
+  .welcome-screen {
+    top: 0;
+    height: 100%;
+  }
+}
