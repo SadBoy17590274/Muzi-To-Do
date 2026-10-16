@@ -253,11 +253,12 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // New Task Modal State (Attachment Window)
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskImages, setNewTaskImages] = useState([]);
-  const [newTaskFiles, setNewTaskFiles] = useState([]);
+  // Chat Bar Inline Attachment State
+  const [attachedImages, setAttachedImages] = useState([]);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const attachMenuAnim = useRef(new Animated.Value(0)).current;
+  const plusRotateAnim = useRef(new Animated.Value(0)).current;
 
   // Detail Modal State (View All Attachments)
   const [selectedTask, setSelectedTask] = useState(null);
@@ -375,6 +376,11 @@ export default function App() {
     outputRange: ['0deg', '180deg'],
   });
 
+  const plusRotation = plusRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'],
+  });
+
   // Pick Images from Gallery
   const handlePickImage = async (isEditing = false) => {
     try {
@@ -396,7 +402,7 @@ export default function App() {
         if (isEditing) {
           setEditImages((prev) => [...prev, ...picked]);
         } else {
-          setNewTaskImages((prev) => [...prev, ...picked]);
+          setAttachedImages((prev) => [...prev, ...picked]);
         }
       }
     } catch (err) {
@@ -421,7 +427,7 @@ export default function App() {
         if (isEditing) {
           setEditFiles((prev) => [...prev, newFile]);
         } else {
-          setNewTaskFiles((prev) => [...prev, newFile]);
+          setAttachedFiles((prev) => [...prev, newFile]);
         }
       }
     } catch (err) {
@@ -429,48 +435,69 @@ export default function App() {
     }
   };
 
-  // Open New Task Window (when tapping plus button)
-  const openAddWindow = () => {
-    setNewTaskTitle(inputText);
-    setInputText('');
-    setNewTaskImages([]);
-    setNewTaskFiles([]);
-    setShowAddModal(true);
+  // Toggle Attachment Action Menu in Bottom Bar
+  const toggleAttachMenu = () => {
+    const nextVal = !showAttachMenu;
+    setShowAttachMenu(nextVal);
+    Animated.spring(attachMenuAnim, {
+      toValue: nextVal ? 1 : 0,
+      friction: 7,
+      tension: 65,
+      useNativeDriver: true,
+    }).start();
+    Animated.spring(plusRotateAnim, {
+      toValue: nextVal ? 1 : 0,
+      friction: 7,
+      tension: 65,
+      useNativeDriver: true,
+    }).start();
   };
 
-  // Save Task with Attachments from Modal
-  const saveNewTask = () => {
-    const trimmed = newTaskTitle.trim();
-    if (!trimmed) return;
-    const newTask = {
-      id: Date.now().toString(),
-      text: trimmed,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      images: newTaskImages,
-      files: newTaskFiles,
-    };
-    setTasks((prev) => [newTask, ...prev]);
-    setShowAddModal(false);
-    setNewTaskTitle('');
-    setNewTaskImages([]);
-    setNewTaskFiles([]);
+  const closeAttachMenu = () => {
+    if (showAttachMenu) {
+      setShowAttachMenu(false);
+      Animated.spring(attachMenuAnim, {
+        toValue: 0,
+        friction: 7,
+        tension: 65,
+        useNativeDriver: true,
+      }).start();
+      Animated.spring(plusRotateAnim, {
+        toValue: 0,
+        friction: 7,
+        tension: 65,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
-  // Quick Add from bottom bar directly on Enter
-  const quickAddTask = () => {
+  const pickInlineImage = async () => {
+    closeAttachMenu();
+    await handlePickImage(false);
+  };
+
+  const pickInlineDocument = async () => {
+    closeAttachMenu();
+    await handlePickDocument(false);
+  };
+
+  // Create Task directly from Chat Input Bar
+  const handleCreateTask = () => {
     const trimmed = inputText.trim();
-    if (!trimmed) return;
+    if (!trimmed && attachedImages.length === 0 && attachedFiles.length === 0) return;
     const newTask = {
       id: Date.now().toString(),
-      text: trimmed,
+      text: trimmed || (attachedImages.length > 0 ? 'Foto-Notiz' : 'Datei-Notiz'),
       completed: false,
       createdAt: new Date().toISOString(),
-      images: [],
-      files: [],
+      images: attachedImages,
+      files: attachedFiles,
     };
     setTasks((prev) => [newTask, ...prev]);
     setInputText('');
+    setAttachedImages([]);
+    setAttachedFiles([]);
+    closeAttachMenu();
   };
 
   const toggleTask = (id) => {
@@ -656,7 +683,7 @@ export default function App() {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Bottom Task Input Bar (Tapping Plus opens the Attachment Window) */}
+      {/* Bottom Chat Input Bar with Inline Attachments and Floating Action Popover */}
       <Animated.View
         style={[
           styles.bottomBar,
@@ -665,151 +692,158 @@ export default function App() {
           },
         ]}
       >
+        {/* Floating Attachments Menu Popover right above the bar */}
+        {showAttachMenu && (
+          <Animated.View
+            style={[
+              styles.attachMenuPopover,
+              isDark ? styles.attachMenuDark : styles.attachMenuLight,
+              {
+                opacity: attachMenuAnim,
+                transform: [
+                  {
+                    translateY: attachMenuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 0],
+                    }),
+                  },
+                  {
+                    scale: attachMenuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.94, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={pickInlineImage}
+              style={styles.attachMenuItem}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                <Feather name="image" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+              </View>
+              <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                Bild
+              </Text>
+            </TouchableOpacity>
+
+            <View
+              style={[
+                styles.attachMenuDivider,
+                isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
+              ]}
+            />
+
+            <TouchableOpacity
+              onPress={pickInlineDocument}
+              style={styles.attachMenuItem}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                <Feather name="paperclip" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+              </View>
+              <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                Datei
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Live Attachments Preview directly docked above the text input inside the chat bar */}
+        {(attachedImages.length > 0 || attachedFiles.length > 0) && (
+          <View style={[styles.chatPreviewBar, isDark ? styles.chatPreviewBarDark : styles.chatPreviewBarLight]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chatPreviewScroll}
+            >
+              {attachedImages.map((img, idx) => (
+                <View key={`chat-img-${idx}`} style={styles.chatThumbWrapper}>
+                  <Image source={{ uri: img.uri }} style={styles.chatThumbImage} />
+                  <TouchableOpacity
+                    onPress={() => setAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
+                    style={styles.chatThumbDelete}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="x" size={11} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {attachedFiles.map((f, idx) => (
+                <View
+                  key={`chat-file-${idx}`}
+                  style={[styles.chatFileChip, isDark ? styles.chatFileChipDark : styles.chatFileChipLight]}
+                >
+                  <Feather name="file" size={14} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text
+                    style={[styles.chatFileName, isDark ? styles.textDark : styles.textLight]}
+                    numberOfLines={1}
+                  >
+                    {f.name}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="x" size={13} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* The Chat Input Pill */}
         <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
+          {/* Plus Toggle Button (rotates 45 deg smoothly into an X) */}
+          <TouchableOpacity
+            onPress={toggleAttachMenu}
+            style={[styles.attachToggleBtn, isDark ? styles.attachToggleDark : styles.attachToggleLight]}
+            activeOpacity={0.7}
+          >
+            <Animated.View style={{ transform: [{ rotate: plusRotation }] }}>
+              <Feather name="plus" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+            </Animated.View>
+          </TouchableOpacity>
+
           <TextInput
             ref={textInputRef}
-            placeholder="Neue Aufgabe..."
+            placeholder="Aufgabe schreiben..."
             placeholderTextColor={isDark ? '#777777' : '#999999'}
             value={inputText}
             onChangeText={setInputText}
-            onSubmitEditing={quickAddTask}
-            returnKeyType="done"
+            onSubmitEditing={handleCreateTask}
+            returnKeyType="send"
             style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
           />
+
+          {/* Send / Add Button */}
           <TouchableOpacity
-            onPress={openAddWindow}
-            style={[styles.addButton, isDark ? styles.addButtonDark : styles.addButtonLight]}
+            onPress={handleCreateTask}
+            style={[
+              styles.addButton,
+              isDark ? styles.addButtonDark : styles.addButtonLight,
+              (inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0) &&
+                (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight),
+            ]}
             activeOpacity={0.8}
-            title="Aufgabe mit Bildern/Dateien hinzufügen"
           >
-            <Feather name="plus" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
+            <Feather
+              name={
+                inputText.trim().length > 0 || attachedImages.length > 0 || attachedFiles.length > 0
+                  ? 'arrow-up'
+                  : 'plus'
+              }
+              size={20}
+              color={isDark ? '#000000' : '#FFFFFF'}
+            />
           </TouchableOpacity>
         </View>
       </Animated.View>
-
-      {/* =====================================================================
-          FENSTER 1: Neue Aufgabe mit Bildern & Dateien hinzufügen (Plus-Klick)
-          ===================================================================== */}
-      <Modal visible={showAddModal} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.sheetContainer, isDark ? styles.sheetDark : styles.sheetLight]}>
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, isDark ? styles.textDark : styles.textLight]}>
-                Neue Aufgabe
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowAddModal(false)}
-                style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
-                activeOpacity={0.7}
-              >
-                <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <TextInput
-                placeholder="Was möchtest du erledigen?"
-                placeholderTextColor={isDark ? '#777777' : '#999999'}
-                value={newTaskTitle}
-                onChangeText={setNewTaskTitle}
-                style={[styles.sheetInput, isDark ? styles.sheetInputDark : styles.sheetInputLight]}
-                multiline
-                autoFocus
-              />
-
-              {/* Attachment Actions (Bilder & Dateien) */}
-              <View style={styles.attachmentButtonsRow}>
-                <TouchableOpacity
-                  onPress={() => handlePickImage(false)}
-                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="image" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
-                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
-                    Bild wählen
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handlePickDocument(false)}
-                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="paperclip" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
-                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
-                    Datei wählen
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Image Previews */}
-              {newTaskImages.length > 0 && (
-                <View style={styles.previewSection}>
-                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
-                    Bilder ({newTaskImages.length})
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                    {newTaskImages.map((img, idx) => (
-                      <View key={idx} style={styles.thumbWrapper}>
-                        <Image source={{ uri: img.uri }} style={styles.thumbImage} />
-                        <TouchableOpacity
-                          onPress={() => setNewTaskImages((prev) => prev.filter((_, i) => i !== idx))}
-                          style={styles.thumbDeleteBtn}
-                          activeOpacity={0.8}
-                        >
-                          <Feather name="x" size={12} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* File Previews */}
-              {newTaskFiles.length > 0 && (
-                <View style={styles.previewSection}>
-                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
-                    Dateien ({newTaskFiles.length})
-                  </Text>
-                  <View style={{ gap: 8, marginTop: 8 }}>
-                    {newTaskFiles.map((f, idx) => (
-                      <View
-                        key={idx}
-                        style={[styles.fileItemChip, isDark ? styles.fileItemDark : styles.fileItemLight]}
-                      >
-                        <Feather name="file" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
-                        <Text
-                          style={[styles.fileNameText, isDark ? styles.textDark : styles.textLight]}
-                          numberOfLines={1}
-                        >
-                          {f.name}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => setNewTaskFiles((prev) => prev.filter((_, i) => i !== idx))}
-                          activeOpacity={0.7}
-                        >
-                          <Feather name="x" size={16} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Save Task Button */}
-              <TouchableOpacity
-                onPress={saveNewTask}
-                style={[styles.sheetSaveBtn, isDark ? styles.sheetSaveBtnDark : styles.sheetSaveBtnLight]}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.sheetSaveText, isDark ? styles.sheetSaveTextDark : styles.sheetSaveTextLight]}>
-                  Aufgabe speichern
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* =====================================================================
           FENSTER 2: Detail-Ansicht (Antippen einer Aufgabe)
@@ -1665,6 +1699,139 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  // Floating Action Popover for Attachments (+ Click)
+  attachMenuPopover: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    marginLeft: 6,
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  attachMenuDark: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  attachMenuLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  attachMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
+    gap: 8,
+  },
+  attachIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachIconDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  attachIconLight: {
+    backgroundColor: '#000000',
+  },
+  attachMenuText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  attachMenuDivider: {
+    width: 1,
+    height: 20,
+    marginHorizontal: 4,
+  },
+  attachMenuDividerDark: {
+    backgroundColor: '#333333',
+  },
+  attachMenuDividerLight: {
+    backgroundColor: '#E5E5E5',
+  },
+
+  // Chat Attachments Live Preview Bar (Docked right above input pill)
+  chatPreviewBar: {
+    borderRadius: 20,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  chatPreviewBarDark: {
+    backgroundColor: '#161616',
+    borderColor: '#262626',
+  },
+  chatPreviewBarLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EFEFEF',
+  },
+  chatPreviewScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  chatThumbWrapper: {
+    position: 'relative',
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    overflow: 'visible',
+  },
+  chatThumbImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+  },
+  chatThumbDelete: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#000000',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  chatFileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    gap: 8,
+    maxWidth: 160,
+  },
+  chatFileChipDark: {
+    backgroundColor: '#222222',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  chatFileChipLight: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  chatFileName: {
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+
   // Bottom Input
   bottomBar: {
     position: 'absolute',
@@ -1678,7 +1845,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 30,
-    paddingLeft: 20,
+    paddingLeft: 6,
     paddingRight: 6,
     height: 58,
     shadowColor: '#000',
@@ -1697,10 +1864,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
   },
+  attachToggleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachToggleDark: {
+    backgroundColor: '#222222',
+  },
+  attachToggleLight: {
+    backgroundColor: '#F0F0F0',
+  },
   textInput: {
     flex: 1,
     fontSize: 16,
     paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   addButton: {
     width: 44,
@@ -1714,6 +1895,14 @@ const styles = StyleSheet.create({
   },
   addButtonLight: {
     backgroundColor: '#000000',
+  },
+  addButtonActiveDark: {
+    backgroundColor: '#FFFFFF',
+    transform: [{ scale: 1.05 }],
+  },
+  addButtonActiveLight: {
+    backgroundColor: '#000000',
+    transform: [{ scale: 1.05 }],
   },
 
   // Modal Backdrop
