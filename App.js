@@ -903,8 +903,8 @@ export default function App() {
           >
             <Animated.View style={{ transform: [{ rotate: plusRotation }] }}>
               <Feather
-                name={showAttachMenu ? 'x' : 'paperclip'}
-                size={19}
+                name="plus"
+                size={21}
                 color={isDark ? '#FFFFFF' : '#000000'}
               />
             </Animated.View>
