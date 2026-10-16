@@ -8,7 +8,7 @@ import {
   FlatList,
   Animated,
   PanResponder,
-  Dimensions,
+  useWindowDimensions,
   SafeAreaView,
   StatusBar,
   Modal,
@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 const STORAGE_KEYS = {
   TASKS: '@muzi_tasks_v1',
@@ -27,10 +27,26 @@ const STORAGE_KEYS = {
   WELCOME: '@muzi_welcome_v1',
 };
 
+// Safe storage helper
+const safeStorage = {
+  getItem: async (key) => {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  },
+  setItem: async (key, value) => {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (e) {}
+  },
+};
+
 // =============================================================================
 // Swipeable Task Item (Minimalist: Swipe right to delete, red trash icon only)
 // =============================================================================
-const SwipeableTask = ({ item, isDark, onToggle, onDelete }) => {
+const SwipeableTask = ({ item, isDark, onToggle, onDelete, windowWidth }) => {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -51,7 +67,7 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete }) => {
           // Swipe threshold reached: animate out and delete
           Animated.parallel([
             Animated.timing(pan.x, {
-              toValue: Dimensions.get('window').width,
+              toValue: windowWidth || 400,
               duration: 200,
               useNativeDriver: true,
             }),
@@ -137,6 +153,9 @@ const SwipeableTask = ({ item, isDark, onToggle, onDelete }) => {
 // Main App Component
 // =============================================================================
 export default function App() {
+  const { width: windowWidth } = useWindowDimensions();
+  const sidebarWidth = windowWidth * 0.8;
+
   const [tasks, setTasks] = useState([]);
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,15 +169,15 @@ export default function App() {
   const themeRotateAnim = useRef(new Animated.Value(0)).current;
 
   // Sidebar Slide Animation
-  const sidebarAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.8)).current;
+  const sidebarAnim = useRef(new Animated.Value(-400)).current;
 
   // Load Persisted Data
   useEffect(() => {
     (async () => {
       try {
-        const storedTasks = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
-        const storedTheme = await AsyncStorage.getItem(STORAGE_KEYS.THEME);
-        const storedWelcome = await AsyncStorage.getItem(STORAGE_KEYS.WELCOME);
+        const storedTasks = await safeStorage.getItem(STORAGE_KEYS.TASKS);
+        const storedTheme = await safeStorage.getItem(STORAGE_KEYS.THEME);
+        const storedWelcome = await safeStorage.getItem(STORAGE_KEYS.WELCOME);
 
         if (storedTasks) setTasks(JSON.parse(storedTasks));
         if (storedTheme) setIsDark(storedTheme === 'dark');
@@ -174,20 +193,20 @@ export default function App() {
   // Save Tasks
   useEffect(() => {
     if (loaded) {
-      AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+      safeStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     }
   }, [tasks, loaded]);
 
   // Save Theme
   useEffect(() => {
     if (loaded) {
-      AsyncStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+      safeStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
     }
   }, [isDark, loaded]);
 
   // Sidebar toggle
   const toggleSidebar = (open) => {
-    const target = open ? 0 : -Dimensions.get('window').width * 0.8;
+    const target = open ? 0 : -sidebarWidth;
     setSidebarOpen(open);
     Animated.spring(sidebarAnim, {
       toValue: target,
@@ -248,7 +267,7 @@ export default function App() {
   };
 
   const dismissWelcome = async () => {
-    await AsyncStorage.setItem(STORAGE_KEYS.WELCOME, 'true');
+    await safeStorage.setItem(STORAGE_KEYS.WELCOME, 'true');
     setShowWelcome(false);
   };
 
@@ -332,7 +351,7 @@ export default function App() {
       {/* Task List */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform?.OS === 'ios' ? 'padding' : undefined}
       >
         <FlatList
           data={filteredTasks}
@@ -343,6 +362,7 @@ export default function App() {
               isDark={isDark}
               onToggle={toggleTask}
               onDelete={deleteTask}
+              windowWidth={windowWidth}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -398,7 +418,7 @@ export default function App() {
         style={[
           styles.sidebar,
           isDark ? styles.sidebarDark : styles.sidebarLight,
-          { transform: [{ translateX: sidebarAnim }] },
+          { width: sidebarWidth, transform: [{ translateX: sidebarAnim }] },
         ]}
       >
         {/* Sidebar Header */}
@@ -741,13 +761,13 @@ const styles = StyleSheet.create({
     color: '#777777',
   },
 
-  // Header
+  // Header (no root-level Platform calls)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 36 : 10,
+    paddingTop: 36,
     paddingBottom: 14,
   },
   headerDark: {
@@ -927,14 +947,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Bottom Input
+  // Bottom Input (no root-level Platform calls)
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingBottom: 20,
     paddingTop: 10,
   },
   bottomBarDark: {
@@ -992,16 +1012,15 @@ const styles = StyleSheet.create({
     zIndex: 99,
   },
 
-  // Sidebar with rounded corners per user rule
+  // Sidebar with rounded corners per user rule (width set dynamically via useWindowDimensions)
   sidebar: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
-    width: Dimensions.get('window').width * 0.8,
     borderTopRightRadius: 32,
     borderBottomRightRadius: 32,
-    paddingTop: Platform.OS === 'android' ? 44 : 24,
+    paddingTop: 44,
     paddingHorizontal: 22,
     paddingBottom: 30,
     zIndex: 100,
