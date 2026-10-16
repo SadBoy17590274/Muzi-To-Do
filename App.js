@@ -13,11 +13,15 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 const STORAGE_KEYS = {
   TASKS: '@muzi_tasks_v1',
@@ -43,22 +47,19 @@ const safeStorage = {
 
 // =============================================================================
 // Swipeable Task Item:
-// - Swipe RIGHT: Delete (Minimalist freestanding red trash icon)
-// - Swipe LEFT: Toggle Completed (Minimalist freestanding check icon)
-// - Tap Task: Edit inline
+// - Swipe RIGHT: Delete (freistehendes rotes Mülleimer-Icon)
+// - Swipe LEFT: Als erledigt markieren (freistehendes Häkchen)
+// - Antippen (onPress): Detail-Fenster öffnen mit allen Bildern/Dateien
+// - Gedrückt halten (onLongPress): Aufgabe bearbeiten
 // =============================================================================
 const SwipeableTask = ({
   item,
   isDark,
   onToggle,
   onDelete,
+  onPressTask,
+  onLongPressTask,
   windowWidth,
-  isEditing,
-  editingText,
-  setEditingText,
-  startEditing,
-  saveEditing,
-  cancelEditing,
 }) => {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const opacity = useRef(new Animated.Value(1)).current;
@@ -67,8 +68,6 @@ const SwipeableTask = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) => {
-        // Only trigger on horizontal swipe when not editing
-        if (isEditing) return false;
         return Math.abs(gesture.dx) > 12 && Math.abs(gesture.dy) < 15;
       },
       onPanResponderMove: (_, gesture) => {
@@ -76,7 +75,7 @@ const SwipeableTask = ({
       },
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx > 110) {
-          // Swipe RIGHT -> Delete task
+          // Swipe RIGHT -> Delete
           Animated.parallel([
             Animated.timing(pan.x, {
               toValue: windowWidth || 400,
@@ -92,7 +91,7 @@ const SwipeableTask = ({
             onDelete(item.id);
           });
         } else if (gesture.dx < -100) {
-          // Swipe LEFT -> Mark as completed / Toggle completed
+          // Swipe LEFT -> Mark as completed
           onToggle(item.id);
           Animated.spring(pan.x, {
             toValue: 0,
@@ -113,7 +112,6 @@ const SwipeableTask = ({
     })
   ).current;
 
-  // Red trash icon animation (swipe right)
   const trashScale = pan.x.interpolate({
     inputRange: [0, 40, 110],
     outputRange: [0.5, 0.9, 1.25],
@@ -125,7 +123,6 @@ const SwipeableTask = ({
     extrapolate: 'clamp',
   });
 
-  // Green checkmark icon animation (swipe left)
   const completeScale = pan.x.interpolate({
     inputRange: [-110, -40, 0],
     outputRange: [1.25, 0.9, 0.5],
@@ -137,6 +134,9 @@ const SwipeableTask = ({
     extrapolate: 'clamp',
   });
 
+  const hasAttachments =
+    (item.images && item.images.length > 0) || (item.files && item.files.length > 0);
+
   return (
     <View style={styles.swipeRowContainer}>
       {/* Freistehendes rotes Mülleimer-Icon (links, beim Nach-Rechts-Wischen) */}
@@ -146,7 +146,7 @@ const SwipeableTask = ({
         </Animated.View>
       </View>
 
-      {/* Freistehendes Erledigt-Icon (rechts, beim Nach-Links-Wischen) */}
+      {/* Freistehendes Häkchen-Icon (rechts, beim Nach-Links-Wischen) */}
       <View style={styles.completeBackground}>
         <Animated.View style={{ transform: [{ scale: completeScale }], opacity: completeOpacity }}>
           <Feather
@@ -180,55 +180,57 @@ const SwipeableTask = ({
           )}
         </TouchableOpacity>
 
-        {/* Task Content: Inline Editing or Text Display */}
-        {isEditing ? (
-          <View style={styles.inlineEditWrapper}>
-            <TextInput
-              value={editingText}
-              onChangeText={setEditingText}
-              onSubmitEditing={saveEditing}
-              returnKeyType="done"
-              autoFocus
-              style={[styles.inlineEditInput, isDark ? styles.textDark : styles.textLight]}
-            />
-            <TouchableOpacity
-              onPress={saveEditing}
-              style={[styles.editActionBtn, isDark ? styles.editSaveBtnDark : styles.editSaveBtnLight]}
-              activeOpacity={0.8}
-            >
-              <Feather name="check" size={16} color={isDark ? '#000000' : '#FFFFFF'} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={cancelEditing}
-              style={[styles.editActionBtn, isDark ? styles.editCancelBtnDark : styles.editCancelBtnLight]}
-              activeOpacity={0.8}
-            >
-              <Feather name="x" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.taskTextWrapper}
-            onPress={() => startEditing(item)}
-            activeOpacity={0.7}
-          >
+        {/* Task Content: Tap opens details, Long Press edits */}
+        <TouchableOpacity
+          style={styles.taskTextWrapper}
+          onPress={() => onPressTask(item)}
+          onLongPress={() => onLongPressTask(item)}
+          delayLongPress={400}
+          activeOpacity={0.75}
+        >
+          <View style={{ flex: 1 }}>
             <Text
               style={[
                 styles.taskTitle,
                 isDark ? styles.textDark : styles.textLight,
                 item.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
               ]}
+              numberOfLines={2}
             >
               {item.text}
             </Text>
-            <Feather
-              name="edit-2"
-              size={13}
-              color={isDark ? '#444444' : '#BBBBBB'}
-              style={{ marginLeft: 8 }}
-            />
-          </TouchableOpacity>
-        )}
+
+            {/* Attachment badges if present */}
+            {hasAttachments && (
+              <View style={styles.attachmentBadgesRow}>
+                {item.images && item.images.length > 0 && (
+                  <View style={[styles.miniBadge, isDark ? styles.miniBadgeDark : styles.miniBadgeLight]}>
+                    <Feather name="image" size={11} color={isDark ? '#AAAAAA' : '#666666'} />
+                    <Text style={[styles.miniBadgeText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                      {item.images.length}
+                    </Text>
+                  </View>
+                )}
+                {item.files && item.files.length > 0 && (
+                  <View style={[styles.miniBadge, isDark ? styles.miniBadgeDark : styles.miniBadgeLight]}>
+                    <Feather name="paperclip" size={11} color={isDark ? '#AAAAAA' : '#666666'} />
+                    <Text style={[styles.miniBadgeText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                      {item.files.length}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Edit hint on long press */}
+          <Feather
+            name="chevron-right"
+            size={16}
+            color={isDark ? '#333333' : '#CCCCCC'}
+            style={{ marginLeft: 8 }}
+          />
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -251,9 +253,20 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // Edit Task State
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const [editingText, setEditingText] = useState('');
+  // New Task Modal State (Attachment Window)
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskImages, setNewTaskImages] = useState([]);
+  const [newTaskFiles, setNewTaskFiles] = useState([]);
+
+  // Detail Modal State (View All Attachments)
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  // Edit Modal State (Triggered on Long Press)
+  const [editingTask, setEditingTask] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editImages, setEditImages] = useState([]);
+  const [editFiles, setEditFiles] = useState([]);
 
   const textInputRef = useRef(null);
 
@@ -364,8 +377,90 @@ export default function App() {
     outputRange: ['0deg', '180deg'],
   });
 
-  // Task Operations
-  const addTask = () => {
+  // Pick Images from Gallery
+  const handlePickImage = async (isEditing = false) => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const picked = result.assets.map((asset) => ({
+          uri: asset.uri,
+          name: asset.fileName || 'Bild',
+        }));
+        if (isEditing) {
+          setEditImages((prev) => [...prev, ...picked]);
+        } else {
+          setNewTaskImages((prev) => [...prev, ...picked]);
+        }
+      }
+    } catch (err) {
+      console.warn('Image picker error:', err);
+    }
+  };
+
+  // Pick Documents/Files
+  const handlePickDocument = async (isEditing = false) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const doc = result.assets[0];
+        const newFile = {
+          uri: doc.uri,
+          name: doc.name || 'Dokument',
+          size: doc.size,
+        };
+        if (isEditing) {
+          setEditFiles((prev) => [...prev, newFile]);
+        } else {
+          setNewTaskFiles((prev) => [...prev, newFile]);
+        }
+      }
+    } catch (err) {
+      console.warn('Doc picker error:', err);
+    }
+  };
+
+  // Open New Task Window (when tapping plus button)
+  const openAddWindow = () => {
+    setNewTaskTitle(inputText);
+    setInputText('');
+    setNewTaskImages([]);
+    setNewTaskFiles([]);
+    setShowAddModal(true);
+  };
+
+  // Save Task with Attachments from Modal
+  const saveNewTask = () => {
+    const trimmed = newTaskTitle.trim();
+    if (!trimmed) return;
+    const newTask = {
+      id: Date.now().toString(),
+      text: trimmed,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      images: newTaskImages,
+      files: newTaskFiles,
+    };
+    setTasks((prev) => [newTask, ...prev]);
+    setShowAddModal(false);
+    setNewTaskTitle('');
+    setNewTaskImages([]);
+    setNewTaskFiles([]);
+  };
+
+  // Quick Add from bottom bar directly on Enter
+  const quickAddTask = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
     const newTask = {
@@ -373,6 +468,8 @@ export default function App() {
       text: trimmed,
       completed: false,
       createdAt: new Date().toISOString(),
+      images: [],
+      files: [],
     };
     setTasks((prev) => [newTask, ...prev]);
     setInputText('');
@@ -382,37 +479,57 @@ export default function App() {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
     );
+    if (selectedTask && selectedTask.id === id) {
+      setSelectedTask((prev) => ({ ...prev, completed: !prev.completed }));
+    }
   };
 
   const deleteTask = (id) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTask && selectedTask.id === id) {
+      setSelectedTask(null);
+    }
   };
 
   const clearCompleted = () => {
     setTasks((prev) => prev.filter((t) => !t.completed));
   };
 
-  // Edit Task handlers
-  const startEditing = (task) => {
-    setEditingTaskId(task.id);
-    setEditingText(task.text);
+  // Handle Long Press to Edit
+  const handleLongPressTask = (task) => {
+    setEditingTask(task);
+    setEditTitle(task.text);
+    setEditImages(task.images ? [...task.images] : []);
+    setEditFiles(task.files ? [...task.files] : []);
   };
 
-  const saveEditing = () => {
-    if (!editingTaskId) return;
-    const trimmed = editingText.trim();
+  // Save Edited Task
+  const saveEditedTask = () => {
+    if (!editingTask) return;
+    const trimmed = editTitle.trim();
     if (trimmed) {
       setTasks((prev) =>
-        prev.map((t) => (t.id === editingTaskId ? { ...t, text: trimmed } : t))
+        prev.map((t) =>
+          t.id === editingTask.id
+            ? {
+                ...t,
+                text: trimmed,
+                images: editImages,
+                files: editFiles,
+              }
+            : t
+        )
       );
+      if (selectedTask && selectedTask.id === editingTask.id) {
+        setSelectedTask({
+          ...selectedTask,
+          text: trimmed,
+          images: editImages,
+          files: editFiles,
+        });
+      }
     }
-    setEditingTaskId(null);
-    setEditingText('');
-  };
-
-  const cancelEditing = () => {
-    setEditingTaskId(null);
-    setEditingText('');
+    setEditingTask(null);
   };
 
   const dismissWelcome = async () => {
@@ -501,13 +618,7 @@ export default function App() {
       </View>
 
       {/* Task List (Dismiss keyboard on tap outside input) */}
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          if (editingTaskId) cancelEditing();
-        }}
-        accessible={false}
-      >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={{ flex: 1 }}>
           <FlatList
             data={filteredTasks}
@@ -519,13 +630,9 @@ export default function App() {
                 isDark={isDark}
                 onToggle={toggleTask}
                 onDelete={deleteTask}
+                onPressTask={(task) => setSelectedTask(task)}
+                onLongPressTask={handleLongPressTask}
                 windowWidth={windowWidth}
-                isEditing={editingTaskId === item.id}
-                editingText={editingText}
-                setEditingText={setEditingText}
-                startEditing={startEditing}
-                saveEditing={saveEditing}
-                cancelEditing={cancelEditing}
               />
             )}
             contentContainerStyle={[
@@ -552,7 +659,7 @@ export default function App() {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Bottom Task Input Bar (Animated with keyboardShift for Samsung Keyboard) */}
+      {/* Bottom Task Input Bar (Tapping Plus opens the Attachment Window) */}
       <Animated.View
         style={[
           styles.bottomBar,
@@ -568,19 +675,390 @@ export default function App() {
             placeholderTextColor={isDark ? '#777777' : '#999999'}
             value={inputText}
             onChangeText={setInputText}
-            onSubmitEditing={addTask}
+            onSubmitEditing={quickAddTask}
             returnKeyType="done"
             style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
           />
           <TouchableOpacity
-            onPress={addTask}
+            onPress={openAddWindow}
             style={[styles.addButton, isDark ? styles.addButtonDark : styles.addButtonLight]}
             activeOpacity={0.8}
+            title="Aufgabe mit Bildern/Dateien hinzufügen"
           >
-            <Feather name="plus" size={20} color={isDark ? '#000000' : '#FFFFFF'} />
+            <Feather name="plus" size={22} color={isDark ? '#000000' : '#FFFFFF'} />
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* =====================================================================
+          FENSTER 1: Neue Aufgabe mit Bildern & Dateien hinzufügen (Plus-Klick)
+          ===================================================================== */}
+      <Modal visible={showAddModal} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.sheetContainer, isDark ? styles.sheetDark : styles.sheetLight]}>
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, isDark ? styles.textDark : styles.textLight]}>
+                Neue Aufgabe
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAddModal(false)}
+                style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <TextInput
+                placeholder="Was möchtest du erledigen?"
+                placeholderTextColor={isDark ? '#777777' : '#999999'}
+                value={newTaskTitle}
+                onChangeText={setNewTaskTitle}
+                style={[styles.sheetInput, isDark ? styles.sheetInputDark : styles.sheetInputLight]}
+                multiline
+                autoFocus
+              />
+
+              {/* Attachment Actions (Bilder & Dateien) */}
+              <View style={styles.attachmentButtonsRow}>
+                <TouchableOpacity
+                  onPress={() => handlePickImage(false)}
+                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="image" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
+                    Bild wählen
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handlePickDocument(false)}
+                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="paperclip" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
+                    Datei wählen
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Image Previews */}
+              {newTaskImages.length > 0 && (
+                <View style={styles.previewSection}>
+                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Bilder ({newTaskImages.length})
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                    {newTaskImages.map((img, idx) => (
+                      <View key={idx} style={styles.thumbWrapper}>
+                        <Image source={{ uri: img.uri }} style={styles.thumbImage} />
+                        <TouchableOpacity
+                          onPress={() => setNewTaskImages((prev) => prev.filter((_, i) => i !== idx))}
+                          style={styles.thumbDeleteBtn}
+                          activeOpacity={0.8}
+                        >
+                          <Feather name="x" size={12} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* File Previews */}
+              {newTaskFiles.length > 0 && (
+                <View style={styles.previewSection}>
+                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Dateien ({newTaskFiles.length})
+                  </Text>
+                  <View style={{ gap: 8, marginTop: 8 }}>
+                    {newTaskFiles.map((f, idx) => (
+                      <View
+                        key={idx}
+                        style={[styles.fileItemChip, isDark ? styles.fileItemDark : styles.fileItemLight]}
+                      >
+                        <Feather name="file" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
+                        <Text
+                          style={[styles.fileNameText, isDark ? styles.textDark : styles.textLight]}
+                          numberOfLines={1}
+                        >
+                          {f.name}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setNewTaskFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="x" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Save Task Button */}
+              <TouchableOpacity
+                onPress={saveNewTask}
+                style={[styles.sheetSaveBtn, isDark ? styles.sheetSaveBtnDark : styles.sheetSaveBtnLight]}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.sheetSaveText, isDark ? styles.sheetSaveTextDark : styles.sheetSaveTextLight]}>
+                  Aufgabe speichern
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =====================================================================
+          FENSTER 2: Detail-Ansicht (Antippen einer Aufgabe)
+          ===================================================================== */}
+      <Modal visible={!!selectedTask} animationType="fade" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.detailCard, isDark ? styles.detailCardDark : styles.detailCardLight]}>
+            <View style={styles.sheetHeader}>
+              <View style={[styles.statusBadge, selectedTask?.completed ? styles.statusBadgeCompleted : styles.statusBadgeActive]}>
+                <Feather
+                  name={selectedTask?.completed ? 'check' : 'circle'}
+                  size={12}
+                  color={selectedTask?.completed ? '#10B981' : '#888888'}
+                />
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: selectedTask?.completed ? '#10B981' : isDark ? '#CCCCCC' : '#444444' },
+                  ]}
+                >
+                  {selectedTask?.completed ? 'Erledigt' : 'Offen'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setSelectedTask(null)}
+                style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
+              <Text style={[styles.detailTitle, isDark ? styles.textDark : styles.textLight]}>
+                {selectedTask?.text}
+              </Text>
+
+              {/* Images Preview in Detail View */}
+              {selectedTask?.images && selectedTask.images.length > 0 && (
+                <View style={styles.detailSection}>
+                  <Text style={[styles.detailSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Bilder ({selectedTask.images.length})
+                  </Text>
+                  <View style={styles.detailImagesGrid}>
+                    {selectedTask.images.map((img, i) => (
+                      <Image key={i} source={{ uri: img.uri }} style={styles.detailFullImage} resizeMode="cover" />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Files List in Detail View */}
+              {selectedTask?.files && selectedTask.files.length > 0 && (
+                <View style={styles.detailSection}>
+                  <Text style={[styles.detailSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Angehängte Dateien ({selectedTask.files.length})
+                  </Text>
+                  <View style={{ gap: 8, marginTop: 8 }}>
+                    {selectedTask.files.map((f, i) => (
+                      <View
+                        key={i}
+                        style={[styles.detailFileChip, isDark ? styles.fileItemDark : styles.fileItemLight]}
+                      >
+                        <Feather name="file-text" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
+                        <Text
+                          style={[styles.fileNameText, isDark ? styles.textDark : styles.textLight]}
+                          numberOfLines={1}
+                        >
+                          {f.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {(!selectedTask?.images || selectedTask.images.length === 0) &&
+                (!selectedTask?.files || selectedTask.files.length === 0) && (
+                  <Text style={[styles.noAttachmentsText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Keine Bilder oder Dateien angehängt. (Länger gedrückt halten zum Bearbeiten)
+                  </Text>
+                )}
+
+              {/* Actions inside Detail Card */}
+              <View style={styles.detailActionsRow}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedTask) toggleTask(selectedTask.id);
+                  }}
+                  style={[styles.detailActionBtn, isDark ? styles.detailActionDark : styles.detailActionLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather
+                    name={selectedTask?.completed ? 'rotate-ccw' : 'check'}
+                    size={16}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                  />
+                  <Text style={[styles.detailActionText, isDark ? styles.textDark : styles.textLight]}>
+                    {selectedTask?.completed ? 'Wieder öffnen' : 'Als erledigt markieren'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedTask) {
+                      const t = selectedTask;
+                      setSelectedTask(null);
+                      handleLongPressTask(t);
+                    }
+                  }}
+                  style={[styles.detailActionBtn, isDark ? styles.detailActionDark : styles.detailActionLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="edit-2" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text style={[styles.detailActionText, isDark ? styles.textDark : styles.textLight]}>
+                    Bearbeiten
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =====================================================================
+          FENSTER 3: Aufgabe bearbeiten (Langes Gedrückthalten)
+          ===================================================================== */}
+      <Modal visible={!!editingTask} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.sheetContainer, isDark ? styles.sheetDark : styles.sheetLight]}>
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, isDark ? styles.textDark : styles.textLight]}>
+                Aufgabe bearbeiten
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditingTask(null)}
+                style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <TextInput
+                value={editTitle}
+                onChangeText={setEditTitle}
+                style={[styles.sheetInput, isDark ? styles.sheetInputDark : styles.sheetInputLight]}
+                multiline
+                autoFocus
+              />
+
+              {/* Attachments Actions for Editing */}
+              <View style={styles.attachmentButtonsRow}>
+                <TouchableOpacity
+                  onPress={() => handlePickImage(true)}
+                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="image" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
+                    Bild hinzufügen
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handlePickDocument(true)}
+                  style={[styles.attachButton, isDark ? styles.attachBtnDark : styles.attachBtnLight]}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="paperclip" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
+                  <Text style={[styles.attachBtnText, isDark ? styles.textDark : styles.textLight]}>
+                    Datei hinzufügen
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Image Previews in Edit */}
+              {editImages.length > 0 && (
+                <View style={styles.previewSection}>
+                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Bilder ({editImages.length})
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                    {editImages.map((img, idx) => (
+                      <View key={idx} style={styles.thumbWrapper}>
+                        <Image source={{ uri: img.uri }} style={styles.thumbImage} />
+                        <TouchableOpacity
+                          onPress={() => setEditImages((prev) => prev.filter((_, i) => i !== idx))}
+                          style={styles.thumbDeleteBtn}
+                          activeOpacity={0.8}
+                        >
+                          <Feather name="x" size={12} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* File Previews in Edit */}
+              {editFiles.length > 0 && (
+                <View style={styles.previewSection}>
+                  <Text style={[styles.previewSectionTitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Dateien ({editFiles.length})
+                  </Text>
+                  <View style={{ gap: 8, marginTop: 8 }}>
+                    {editFiles.map((f, idx) => (
+                      <View
+                        key={idx}
+                        style={[styles.fileItemChip, isDark ? styles.fileItemDark : styles.fileItemLight]}
+                      >
+                        <Feather name="file" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
+                        <Text
+                          style={[styles.fileNameText, isDark ? styles.textDark : styles.textLight]}
+                          numberOfLines={1}
+                        >
+                          {f.name}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setEditFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="x" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Save Button */}
+              <TouchableOpacity
+                onPress={saveEditedTask}
+                style={[styles.sheetSaveBtn, isDark ? styles.sheetSaveBtnDark : styles.sheetSaveBtnLight]}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.sheetSaveText, isDark ? styles.sheetSaveTextDark : styles.sheetSaveTextLight]}>
+                  Änderungen speichern
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Sidebar (Drawer) with Rounded Corners per user rule */}
       {sidebarOpen && (
@@ -1087,7 +1565,6 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '500',
-    flex: 1,
   },
   taskCompletedDark: {
     textDecorationLine: 'line-through',
@@ -1097,42 +1574,29 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: '#999999',
   },
-
-  // Inline Editing
-  inlineEditWrapper: {
-    flex: 1,
+  attachmentBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 6,
   },
-  inlineEditInput: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#888888',
-  },
-  editActionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  miniBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
   },
-  editSaveBtnLight: {
-    backgroundColor: '#000000',
+  miniBadgeLight: {
+    backgroundColor: '#F0F0F0',
   },
-  editSaveBtnDark: {
-    backgroundColor: '#FFFFFF',
+  miniBadgeDark: {
+    backgroundColor: '#1E1E1E',
   },
-  editCancelBtnLight: {
-    backgroundColor: '#EEEEEE',
-  },
-  editCancelBtnDark: {
-    backgroundColor: '#262626',
+  miniBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // Empty state
@@ -1217,6 +1681,275 @@ const styles = StyleSheet.create({
   },
   addButtonLight: {
     backgroundColor: '#000000',
+  },
+
+  // Modal Backdrop
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+
+  // Modal Sheet (New Task & Edit Task)
+  sheetContainer: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    maxHeight: '85%',
+  },
+  sheetDark: {
+    backgroundColor: '#0E0E0E',
+    borderTopWidth: 1,
+    borderColor: '#222222',
+  },
+  sheetLight: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  sheetInput: {
+    fontSize: 17,
+    fontWeight: '500',
+    minHeight: 80,
+    borderRadius: 18,
+    padding: 16,
+    textAlignVertical: 'top',
+    marginBottom: 18,
+  },
+  sheetInputLight: {
+    backgroundColor: '#F7F7F7',
+    color: '#000000',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  sheetInputDark: {
+    backgroundColor: '#161616',
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#282828',
+  },
+  attachmentButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  attachButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 20,
+  },
+  attachBtnLight: {
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  attachBtnDark: {
+    backgroundColor: '#18181B',
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  attachBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  previewSection: {
+    marginBottom: 16,
+  },
+  previewSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  thumbWrapper: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  thumbImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 16,
+  },
+  thumbDeleteBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fileItemChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    gap: 10,
+  },
+  fileItemLight: {
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  fileItemDark: {
+    backgroundColor: '#18181B',
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  fileNameText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sheetSaveBtn: {
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  sheetSaveBtnLight: {
+    backgroundColor: '#000000',
+  },
+  sheetSaveBtnDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  sheetSaveText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sheetSaveTextLight: {
+    color: '#FFFFFF',
+  },
+  sheetSaveTextDark: {
+    color: '#000000',
+  },
+
+  // Detail Modal Card
+  detailCard: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    maxHeight: '90%',
+  },
+  detailCardDark: {
+    backgroundColor: '#0E0E0E',
+    borderTopWidth: 1,
+    borderColor: '#222222',
+  },
+  detailCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusBadgeActive: {
+    backgroundColor: '#262626',
+  },
+  statusBadgeCompleted: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 30,
+    marginBottom: 20,
+    letterSpacing: -0.3,
+  },
+  detailSection: {
+    marginBottom: 20,
+  },
+  detailSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  detailImagesGrid: {
+    gap: 12,
+  },
+  detailFullImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 20,
+  },
+  detailFileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    gap: 12,
+  },
+  noAttachmentsText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginVertical: 14,
+  },
+  detailActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  detailActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 20,
+    gap: 8,
+  },
+  detailActionLight: {
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  detailActionDark: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2C2C2C',
+  },
+  detailActionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Backdrop
