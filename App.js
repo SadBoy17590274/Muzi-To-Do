@@ -240,7 +240,7 @@ const SwipeableTask = ({
 // Main App Component
 // =============================================================================
 export default function App() {
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const sidebarWidth = windowWidth * 0.8;
 
   const [tasks, setTasks] = useState([]);
@@ -252,6 +252,11 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Welcome Screen Swipe Up Animation
+  const welcomeTranslateY = useRef(new Animated.Value(0)).current;
+  const welcomeOpacity = useRef(new Animated.Value(1)).current;
+  const chevronBounce = useRef(new Animated.Value(0)).current;
 
   // Chat Bar Inline Attachment State
   const [attachedImages, setAttachedImages] = useState([]);
@@ -557,12 +562,85 @@ export default function App() {
     setEditingTask(null);
   };
 
+  // Bouncing animation for the swipe-up chevron indicator
+  useEffect(() => {
+    if (showWelcome) {
+      welcomeTranslateY.setValue(0);
+      welcomeOpacity.setValue(1);
+      const bounceLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(chevronBounce, {
+            toValue: -8,
+            duration: 850,
+            useNativeDriver: true,
+          }),
+          Animated.timing(chevronBounce, {
+            toValue: 0,
+            duration: 850,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      bounceLoop.start();
+      return () => bounceLoop.stop();
+    }
+  }, [showWelcome]);
+
   const dismissWelcome = () => {
-    setShowWelcome(false);
-    setTimeout(() => {
-      textInputRef.current?.focus();
-    }, 350);
+    Animated.parallel([
+      Animated.timing(welcomeTranslateY, {
+        toValue: -(windowHeight || 800),
+        duration: 320,
+        useNativeDriver: true,
+      }),
+      Animated.timing(welcomeOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowWelcome(false);
+      welcomeTranslateY.setValue(0);
+      welcomeOpacity.setValue(1);
+      setTimeout(() => {
+        textInputRef.current?.focus();
+      }, 200);
+    });
   };
+
+  const welcomePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 6,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy < 0) {
+          welcomeTranslateY.setValue(gesture.dy);
+          const newOpacity = Math.max(0, 1 - Math.abs(gesture.dy) / 380);
+          welcomeOpacity.setValue(newOpacity);
+        }
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy < -60 || gesture.vy < -0.4) {
+          dismissWelcome();
+        } else {
+          Animated.parallel([
+            Animated.spring(welcomeTranslateY, {
+              toValue: 0,
+              friction: 7,
+              tension: 60,
+              useNativeDriver: true,
+            }),
+            Animated.spring(welcomeOpacity, {
+              toValue: 1,
+              friction: 7,
+              tension: 60,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+      },
+    })
+  ).current;
 
   // Filter Tasks
   const filteredTasks = tasks.filter((t) => {
@@ -1387,65 +1465,92 @@ export default function App() {
         </View>
       </Animated.View>
 
-      {/* Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html) */}
-      <Modal visible={showWelcome} animationType="fade" transparent={false}>
-        <SafeAreaView style={[styles.welcomeContainer, isDark ? styles.bgDark : styles.bgLight]}>
-          <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FAFAFA'} />
+      {/* Willkommens-Bildschirm (Full screen, centered, swipe-up to enter, no top black scrim) */}
+      <Modal
+        visible={showWelcome}
+        transparent={true}
+        statusBarTranslucent={true}
+        animationType="none"
+      >
+        <Animated.View
+          style={[
+            styles.welcomeFullScreen,
+            isDark ? styles.bgDark : styles.bgLight,
+            {
+              opacity: welcomeOpacity,
+              transform: [{ translateY: welcomeTranslateY }],
+            },
+          ]}
+          {...welcomePanResponder.panHandlers}
+        >
+          <ExpoStatusBar
+            style={isDark ? 'light' : 'dark'}
+            translucent={true}
+            backgroundColor="transparent"
+          />
 
-          {/* Top Bar mit runder Schließen-Schaltfläche (wie in index.html) */}
-          <View style={styles.welcomeTopBar}>
-            <TouchableOpacity
-              onPress={dismissWelcome}
+          {/* Dummy top spacer for exact optical centering */}
+          <View style={styles.welcomeTopSpacer} />
+
+          {/* Centered Typography in exact middle of screen */}
+          <View style={styles.aestheticCenterWrapper}>
+            <Text
               style={[
-                styles.btnCloseWelcome,
-                isDark ? styles.btnCloseWelcomeDark : styles.btnCloseWelcomeLight,
+                styles.aestheticGreeting,
+                isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight,
               ]}
-              activeOpacity={0.7}
             >
-              <Feather name="x" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
-            </TouchableOpacity>
+              Willkommen.
+            </Text>
+
+            <Text
+              style={[
+                styles.aestheticQuote,
+                isDark ? styles.textDark : styles.textLight,
+              ]}
+            >
+              „Fokus auf das Wesentliche im täglichen Workflow.“
+            </Text>
+
+            <Text
+              style={[
+                styles.aestheticSubquote,
+                isDark ? styles.subquoteDark : styles.subquoteLight,
+              ]}
+            >
+              Strukturiert, schnelle Erfassung, ohne Überfluss.
+            </Text>
           </View>
 
-          <View style={styles.aestheticWrapper}>
-            <View style={styles.aestheticManifesto}>
-              <Text style={[styles.aestheticGreeting, isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight]}>
-                Willkommen.
-              </Text>
-              <Text style={[styles.aestheticQuote, isDark ? styles.textDark : styles.textLight]}>
-                „Fokus auf das Wesentliche.“
-              </Text>
-              <Text style={[styles.aestheticSubquote, isDark ? styles.subquoteDark : styles.subquoteLight]}>
-                Deine täglichen Aufgaben klar strukturieren.
-              </Text>
-              <Text style={[styles.aestheticTertiary, isDark ? styles.subtextDark : styles.subtextLight]}>
-                Schnelle Erfassung ohne Überfluss.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={dismissWelcome}
-              style={[
-                styles.btnStartAesthetic,
-                isDark ? styles.btnStartAestheticDark : styles.btnStartAestheticLight,
-              ]}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.btnStartAestheticText,
-                  isDark ? styles.btnStartAestheticTextDark : styles.btnStartAestheticTextLight,
-                ]}
-              >
-                {tasks.length > 0 ? 'Weiter zur App' : 'Jetzt starten'}
-              </Text>
+          {/* Elegant Swipe Up Indicator at the bottom */}
+          <TouchableOpacity
+            onPress={dismissWelcome}
+            activeOpacity={0.8}
+            style={styles.swipeUpContainer}
+          >
+            <Animated.View style={{ transform: [{ translateY: chevronBounce }] }}>
               <Feather
-                name="arrow-right"
-                size={20}
-                color={isDark ? '#000000' : '#FFFFFF'}
+                name="chevron-up"
+                size={26}
+                color={isDark ? '#888888' : '#777777'}
               />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
+            </Animated.View>
+            <Text
+              style={[
+                styles.swipeUpText,
+                isDark ? styles.subtextDark : styles.subtextLight,
+              ]}
+            >
+              Nach oben wischen
+            </Text>
+            <View
+              style={[
+                styles.swipeUpBar,
+                isDark ? styles.swipeUpBarDark : styles.swipeUpBarLight,
+              ]}
+            />
+          </TouchableOpacity>
+        </Animated.View>
       </Modal>
     </SafeAreaView>
   );
@@ -2385,52 +2490,35 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html)
-  welcomeContainer: {
-    flex: 1,
+  // Willkommens-Bildschirm (Full screen, centered, swipe-up to enter)
+  welcomeFullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'space-between',
-    paddingBottom: 40,
-  },
-  welcomeTopBar: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 22,
-    paddingTop: 14,
-    paddingBottom: 6,
-  },
-  btnCloseWelcome: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
     alignItems: 'center',
+    paddingHorizontal: 28,
+    zIndex: 999,
+  },
+  welcomeTopSpacer: {
+    height: 60,
+  },
+  aestheticCenterWrapper: {
+    flex: 1,
     justifyContent: 'center',
-  },
-  btnCloseWelcomeDark: {
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
-  btnCloseWelcomeLight: {
-    backgroundColor: '#EEEEEE',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  aestheticWrapper: {
+    alignItems: 'center',
+    maxWidth: 380,
     width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-    paddingHorizontal: 30,
-  },
-  aestheticManifesto: {
-    marginBottom: 44,
   },
   aestheticGreeting: {
-    fontSize: 22,
+    fontSize: 24,
     fontStyle: 'italic',
     fontFamily: 'serif',
     letterSpacing: -0.2,
-    marginBottom: 8,
+    marginBottom: 14,
+    textAlign: 'center',
   },
   aestheticGreetingLight: {
     color: '#71717A',
@@ -2439,59 +2527,53 @@ const styles = StyleSheet.create({
     color: '#A1A1AA',
   },
   aestheticQuote: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '700',
     fontStyle: 'italic',
     fontFamily: 'serif',
     lineHeight: 42,
     letterSpacing: -0.5,
     marginBottom: 20,
+    textAlign: 'center',
   },
   aestheticSubquote: {
     fontSize: 17,
     fontWeight: '500',
-    lineHeight: 25,
+    lineHeight: 26,
     letterSpacing: -0.2,
-    marginBottom: 8,
+    textAlign: 'center',
   },
   subquoteLight: {
-    color: '#18181B',
+    color: '#3F3F46',
   },
   subquoteDark: {
-    color: '#F4F4F5',
+    color: '#E4E4E7',
   },
-  aestheticTertiary: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  btnStartAesthetic: {
-    flexDirection: 'row',
+
+  // Swipe Up Indicator at the bottom
+  swipeUpContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 28,
-    borderRadius: 999,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    elevation: 8,
+    paddingBottom: 28,
+    paddingTop: 12,
+    gap: 4,
   },
-  btnStartAestheticLight: {
-    backgroundColor: '#000000',
-  },
-  btnStartAestheticDark: {
-    backgroundColor: '#FFFFFF',
-  },
-  btnStartAestheticText: {
-    fontSize: 17,
+  swipeUpText: {
+    fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  btnStartAestheticTextLight: {
-    color: '#FFFFFF',
+  swipeUpBar: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 6,
   },
-  btnStartAestheticTextDark: {
-    color: '#000000',
+  swipeUpBarDark: {
+    backgroundColor: '#333333',
+  },
+  swipeUpBarLight: {
+    backgroundColor: '#D4D4D8',
   },
 });
