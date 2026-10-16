@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Muzi To-Do",
+    "slug": "muzi-to-do",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#000000"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "66166c66-7b99-43b0-a368-17601c5733ac"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
