@@ -1017,8 +1017,12 @@ export default function App() {
       {/* =====================================================================
           FENSTER 2: Detail-Ansicht (Antippen einer Aufgabe)
           ===================================================================== */}
-      <Modal visible={!!selectedTask} animationType="fade" transparent>
+      <Modal visible={!!selectedTask} animationType="fade" transparent statusBarTranslucent={true}>
+        <ExpoStatusBar style="light" translucent={true} backgroundColor="transparent" />
         <View style={styles.modalBackdrop}>
+          <TouchableWithoutFeedback onPress={() => setSelectedTask(null)}>
+            <View style={StyleSheet.absoluteFillObject} />
+          </TouchableWithoutFeedback>
           <View style={[styles.detailCard, isDark ? styles.detailCardDark : styles.detailCardLight]}>
             <View style={styles.sheetHeader}>
               <View style={[styles.statusBadge, selectedTask?.completed ? styles.statusBadgeCompleted : styles.statusBadgeActive]}>
@@ -1141,8 +1145,12 @@ export default function App() {
       {/* =====================================================================
           FENSTER 3: Aufgabe bearbeiten (Langes Gedrückthalten)
           ===================================================================== */}
-      <Modal visible={!!editingTask} animationType="slide" transparent>
+      <Modal visible={!!editingTask} animationType="slide" transparent statusBarTranslucent={true}>
+        <ExpoStatusBar style="light" translucent={true} backgroundColor="transparent" />
         <View style={styles.modalBackdrop}>
+          <TouchableWithoutFeedback onPress={() => setEditingTask(null)}>
+            <View style={StyleSheet.absoluteFillObject} />
+          </TouchableWithoutFeedback>
           <View style={[styles.sheetContainer, isDark ? styles.sheetDark : styles.sheetLight]}>
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, isDark ? styles.textDark : styles.textLight]}>
