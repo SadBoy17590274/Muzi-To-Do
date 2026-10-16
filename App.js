@@ -15,6 +15,7 @@ import {
   Keyboard,
   Image,
   ScrollView,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -307,8 +308,9 @@ export default function App() {
     };
   }, []);
 
-  // Theme Rotation Animation
+  // Theme Rotation & Scale Animation
   const themeRotateAnim = useRef(new Animated.Value(0)).current;
+  const themeScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Sidebar Slide Animation
   const sidebarAnim = useRef(new Animated.Value(-400)).current;
@@ -344,38 +346,49 @@ export default function App() {
     }
   }, [isDark, loaded]);
 
-  // Sidebar toggle
+  // Sidebar toggle - softer, graceful spring
   const toggleSidebar = (open) => {
     const target = open ? 0 : -sidebarWidth;
     setSidebarOpen(open);
     Animated.spring(sidebarAnim, {
       toValue: target,
       useNativeDriver: true,
-      friction: 8,
-      tension: 65,
+      friction: 9,
+      tension: 48,
     }).start();
   };
 
-  // Theme Toggle Animation
+  // Theme Toggle: Smooth, elegant 360° rotation with gentle scale bounce
   const toggleTheme = () => {
-    Animated.sequence([
+    setIsDark((prev) => !prev);
+    themeRotateAnim.setValue(0);
+    Animated.parallel([
       Animated.timing(themeRotateAnim, {
         toValue: 1,
-        duration: 250,
+        duration: 650,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
-      Animated.timing(themeRotateAnim, {
-        toValue: 0,
-        duration: 0,
-        useNativeDriver: true,
-      }),
+      Animated.sequence([
+        Animated.timing(themeScaleAnim, {
+          toValue: 0.8,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(themeScaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
-    setIsDark((prev) => !prev);
   };
 
   const themeRotation = themeRotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
+    outputRange: ['0deg', '360deg'],
   });
 
   const plusRotation = plusRotateAnim.interpolate({
@@ -437,39 +450,43 @@ export default function App() {
     }
   };
 
-  // Toggle Attachment Action Menu in Bottom Bar
+  // Toggle Attachment Action Menu in Bottom Bar - soft fluid spring
   const toggleAttachMenu = () => {
     const nextVal = !showAttachMenu;
     setShowAttachMenu(nextVal);
-    Animated.spring(attachMenuAnim, {
-      toValue: nextVal ? 1 : 0,
-      friction: 7,
-      tension: 65,
-      useNativeDriver: true,
-    }).start();
-    Animated.spring(plusRotateAnim, {
-      toValue: nextVal ? 1 : 0,
-      friction: 7,
-      tension: 65,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.spring(attachMenuAnim, {
+        toValue: nextVal ? 1 : 0,
+        friction: 8,
+        tension: 48,
+        useNativeDriver: true,
+      }),
+      Animated.spring(plusRotateAnim, {
+        toValue: nextVal ? 1 : 0,
+        friction: 8,
+        tension: 48,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const closeAttachMenu = () => {
     if (showAttachMenu) {
       setShowAttachMenu(false);
-      Animated.spring(attachMenuAnim, {
-        toValue: 0,
-        friction: 7,
-        tension: 65,
-        useNativeDriver: true,
-      }).start();
-      Animated.spring(plusRotateAnim, {
-        toValue: 0,
-        friction: 7,
-        tension: 65,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.spring(attachMenuAnim, {
+          toValue: 0,
+          friction: 8,
+          tension: 48,
+          useNativeDriver: true,
+        }),
+        Animated.spring(plusRotateAnim, {
+          toValue: 0,
+          friction: 8,
+          tension: 48,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   };
 
@@ -559,7 +576,7 @@ export default function App() {
     setEditingTask(null);
   };
 
-  // Bouncing animation for the swipe-up chevron indicator
+  // Ambient pulsing animation for the swipe-up chevron indicator
   useEffect(() => {
     if (showWelcome) {
       welcomeTranslateY.setValue(0);
@@ -567,13 +584,15 @@ export default function App() {
       const bounceLoop = Animated.loop(
         Animated.sequence([
           Animated.timing(chevronBounce, {
-            toValue: -8,
-            duration: 850,
+            toValue: -9,
+            duration: 1250,
+            easing: Easing.inOut(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.timing(chevronBounce, {
             toValue: 0,
-            duration: 850,
+            duration: 1250,
+            easing: Easing.inOut(Easing.quad),
             useNativeDriver: true,
           }),
         ])
@@ -587,21 +606,21 @@ export default function App() {
     Animated.parallel([
       Animated.timing(welcomeTranslateY, {
         toValue: -(windowHeight || 800),
-        duration: 320,
+        duration: 520,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
       Animated.timing(welcomeOpacity, {
         toValue: 0,
-        duration: 250,
+        duration: 420,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
         useNativeDriver: true,
       }),
     ]).start(() => {
       setShowWelcome(false);
       welcomeTranslateY.setValue(0);
       welcomeOpacity.setValue(1);
-      setTimeout(() => {
-        textInputRef.current?.focus();
-      }, 200);
+      // NOTE: Do not auto-focus keyboard so it does not open automatically!
     });
   };
 
@@ -612,25 +631,25 @@ export default function App() {
       onPanResponderMove: (_, gesture) => {
         if (gesture.dy < 0) {
           welcomeTranslateY.setValue(gesture.dy);
-          const newOpacity = Math.max(0, 1 - Math.abs(gesture.dy) / 380);
+          const newOpacity = Math.max(0, 1 - Math.abs(gesture.dy) / 420);
           welcomeOpacity.setValue(newOpacity);
         }
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy < -60 || gesture.vy < -0.4) {
+        if (gesture.dy < -60 || gesture.vy < -0.35) {
           dismissWelcome();
         } else {
           Animated.parallel([
             Animated.spring(welcomeTranslateY, {
               toValue: 0,
-              friction: 7,
-              tension: 60,
+              friction: 8,
+              tension: 45,
               useNativeDriver: true,
             }),
             Animated.spring(welcomeOpacity, {
               toValue: 1,
-              friction: 7,
-              tension: 60,
+              friction: 8,
+              tension: 45,
               useNativeDriver: true,
             }),
           ]).start();
@@ -682,7 +701,7 @@ export default function App() {
         </View>
 
         {/* Theme Toggle Button: Icon Only, without Text */}
-        <Animated.View style={{ transform: [{ rotate: themeRotation }] }}>
+        <Animated.View style={{ transform: [{ rotate: themeRotation }, { scale: themeScaleAnim }] }}>
           <TouchableOpacity
             onPress={toggleTheme}
             style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
