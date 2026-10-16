@@ -9,14 +9,12 @@ import {
   Animated,
   PanResponder,
   useWindowDimensions,
-  SafeAreaView,
-  StatusBar,
   Modal,
-  KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -164,6 +162,43 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  const textInputRef = useRef(null);
+
+  // Keyboard Animation (shifts bottom input up above Samsung keyboard)
+  const keyboardShift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setIsKeyboardOpen(true);
+      const height = e?.endCoordinates?.height || 300;
+      Animated.spring(keyboardShift, {
+        toValue: -height + (Platform.OS === 'android' ? -8 : -14),
+        friction: 8,
+        tension: 65,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardOpen(false);
+      Animated.spring(keyboardShift, {
+        toValue: 0,
+        friction: 8,
+        tension: 65,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Theme Rotation Animation
   const themeRotateAnim = useRef(new Animated.Value(0)).current;
@@ -269,6 +304,9 @@ export default function App() {
   const dismissWelcome = async () => {
     await safeStorage.setItem(STORAGE_KEYS.WELCOME, 'true');
     setShowWelcome(false);
+    setTimeout(() => {
+      textInputRef.current?.focus();
+    }, 350);
   };
 
   // Filter Tasks
@@ -348,64 +386,75 @@ export default function App() {
         </View>
       </View>
 
-      {/* Task List */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform?.OS === 'ios' ? 'padding' : undefined}
-      >
-        <FlatList
-          data={filteredTasks}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <SwipeableTask
-              item={item}
-              isDark={isDark}
-              onToggle={toggleTask}
-              onDelete={deleteTask}
-              windowWidth={windowWidth}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={[styles.emptyIconCircle, isDark ? styles.emptyCircleDark : styles.emptyCircleLight]}>
-                <Feather name="check-circle" size={36} color={isDark ? '#FFFFFF' : '#000000'} />
+      {/* Task List (Dismiss keyboard on scroll/tap) */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={filteredTasks}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <SwipeableTask
+                item={item}
+                isDark={isDark}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                windowWidth={windowWidth}
+              />
+            )}
+            contentContainerStyle={[
+              styles.listContent,
+              isKeyboardOpen && { paddingBottom: 380 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={[styles.emptyIconCircle, isDark ? styles.emptyCircleDark : styles.emptyCircleLight]}>
+                  <Feather name="check-circle" size={36} color={isDark ? '#FFFFFF' : '#000000'} />
+                </View>
+                <Text style={[styles.emptyTitle, isDark ? styles.textDark : styles.textLight]}>
+                  {searchQuery ? 'Keine Treffer' : 'Alles erledigt!'}
+                </Text>
+                <Text style={[styles.emptySubtitle, isDark ? styles.subtextDark : styles.subtextLight]}>
+                  {searchQuery
+                    ? 'Versuche einen anderen Suchbegriff.'
+                    : 'Füge unten eine neue Aufgabe hinzu.'}
+                </Text>
               </View>
-              <Text style={[styles.emptyTitle, isDark ? styles.textDark : styles.textLight]}>
-                {searchQuery ? 'Keine Treffer' : 'Alles erledigt!'}
-              </Text>
-              <Text style={[styles.emptySubtitle, isDark ? styles.subtextDark : styles.subtextLight]}>
-                {searchQuery
-                  ? 'Versuche einen anderen Suchbegriff.'
-                  : 'Füge unten eine neue Aufgabe hinzu.'}
-              </Text>
-            </View>
-          }
-        />
-
-        {/* Bottom Task Input Bar */}
-        <View style={[styles.bottomBar, isDark ? styles.bottomBarDark : styles.bottomBarLight]}>
-          <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
-            <TextInput
-              placeholder="Neue Aufgabe..."
-              placeholderTextColor={isDark ? '#777777' : '#999999'}
-              value={inputText}
-              onChangeText={setInputText}
-              onSubmitEditing={addTask}
-              returnKeyType="done"
-              style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
-            />
-            <TouchableOpacity
-              onPress={addTask}
-              style={[styles.addButton, isDark ? styles.addButtonDark : styles.addButtonLight]}
-              activeOpacity={0.8}
-            >
-              <Feather name="plus" size={20} color={isDark ? '#000000' : '#FFFFFF'} />
-            </TouchableOpacity>
-          </View>
+            }
+          />
         </View>
-      </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+
+      {/* Bottom Task Input Bar (Animated with keyboardShift for Samsung Keyboard) */}
+      <Animated.View
+        style={[
+          styles.bottomBar,
+          {
+            transform: [{ translateY: keyboardShift }],
+          },
+        ]}
+      >
+        <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
+          <TextInput
+            ref={textInputRef}
+            placeholder="Neue Aufgabe..."
+            placeholderTextColor={isDark ? '#777777' : '#999999'}
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={addTask}
+            returnKeyType="done"
+            style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
+          />
+          <TouchableOpacity
+            onPress={addTask}
+            style={[styles.addButton, isDark ? styles.addButtonDark : styles.addButtonLight]}
+            activeOpacity={0.8}
+          >
+            <Feather name="plus" size={20} color={isDark ? '#000000' : '#FFFFFF'} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
       {/* Sidebar (Drawer) with Rounded Corners per user rule */}
       {sidebarOpen && (
@@ -683,50 +732,46 @@ export default function App() {
         </View>
       </Animated.View>
 
-      {/* Welcome Screen Modal */}
+      {/* Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html) */}
       <Modal visible={showWelcome} animationType="fade" transparent={false}>
         <SafeAreaView style={[styles.welcomeContainer, isDark ? styles.bgDark : styles.bgLight]}>
-          <View style={styles.welcomeContent}>
-            <View style={[styles.welcomeIconCircle, isDark ? styles.welcomeCircleDark : styles.welcomeCircleLight]}>
-              <Feather name="check" size={44} color={isDark ? '#000000' : '#FFFFFF'} />
-            </View>
-
-            <Text style={[styles.welcomeTitle, isDark ? styles.textDark : styles.textLight]}>
-              Muzi To-Do
-            </Text>
-            <Text style={[styles.welcomeSubtitle, isDark ? styles.subtextDark : styles.subtextLight]}>
-              Minimalistisch. Schnell. Elegant.
-            </Text>
-
-            <View style={[styles.welcomeFeatureCard, isDark ? styles.sidebarCardDark : styles.sidebarCardLight]}>
-              <View style={styles.welcomeFeatureRow}>
-                <Feather name="arrow-right" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
-                <Text style={[styles.welcomeFeatureText, isDark ? styles.textDark : styles.textLight]}>
-                  Nach rechts wischen zum Löschen
-                </Text>
-              </View>
-              <View style={styles.welcomeFeatureRow}>
-                <Feather name="sidebar" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
-                <Text style={[styles.welcomeFeatureText, isDark ? styles.textDark : styles.textLight]}>
-                  Runde Seitenleiste mit Filtern
-                </Text>
-              </View>
-              <View style={styles.welcomeFeatureRow}>
-                <Feather name="moon" size={18} color={isDark ? '#FFFFFF' : '#000000'} />
-                <Text style={[styles.welcomeFeatureText, isDark ? styles.textDark : styles.textLight]}>
-                  OLED Schwarz & Weiß Modus
-                </Text>
-              </View>
+          <View style={styles.aestheticWrapper}>
+            <View style={styles.aestheticManifesto}>
+              <Text style={[styles.aestheticGreeting, isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight]}>
+                Willkommen.
+              </Text>
+              <Text style={[styles.aestheticQuote, isDark ? styles.textDark : styles.textLight]}>
+                "Fokus auf das Wesentliche."
+              </Text>
+              <Text style={[styles.aestheticSubquote, isDark ? styles.subquoteDark : styles.subquoteLight]}>
+                Deine täglichen Aufgaben klar strukturieren.
+              </Text>
+              <Text style={[styles.aestheticTertiary, isDark ? styles.subtextDark : styles.subtextLight]}>
+                Schnelle Erfassung ohne Überfluss.
+              </Text>
             </View>
 
             <TouchableOpacity
               onPress={dismissWelcome}
-              style={[styles.welcomeStartBtn, isDark ? styles.welcomeStartBtnDark : styles.welcomeStartBtnLight]}
+              style={[
+                styles.btnStartAesthetic,
+                isDark ? styles.btnStartAestheticDark : styles.btnStartAestheticLight,
+              ]}
               activeOpacity={0.85}
             >
-              <Text style={[styles.welcomeStartText, isDark ? styles.welcomeStartTextDark : styles.welcomeStartTextLight]}>
-                Jetzt starten
+              <Text
+                style={[
+                  styles.btnStartAestheticText,
+                  isDark ? styles.btnStartAestheticTextDark : styles.btnStartAestheticTextLight,
+                ]}
+              >
+                {tasks.length > 0 ? 'Weiter zur App' : 'Jetzt starten'}
               </Text>
+              <Feather
+                name="arrow-right"
+                size={20}
+                color={isDark ? '#000000' : '#FFFFFF'}
+              />
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -761,7 +806,7 @@ const styles = StyleSheet.create({
     color: '#777777',
   },
 
-  // Header (no root-level Platform calls)
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -838,7 +883,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110,
+    paddingBottom: 120,
     paddingTop: 4,
   },
   swipeRowContainer: {
@@ -947,21 +992,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Bottom Input (no root-level Platform calls)
+  // Bottom Input
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 20,
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 10,
-  },
-  bottomBarDark: {
-    backgroundColor: 'transparent',
-  },
-  bottomBarLight: {
-    backgroundColor: 'transparent',
+    zIndex: 10,
   },
   inputPill: {
     flexDirection: 'row',
@@ -971,10 +1009,10 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     height: 58,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
   },
   inputPillDark: {
     backgroundColor: '#161616',
@@ -1012,7 +1050,7 @@ const styles = StyleSheet.create({
     zIndex: 99,
   },
 
-  // Sidebar with rounded corners per user rule (width set dynamically via useWindowDimensions)
+  // Sidebar with rounded corners per user rule
   sidebar: {
     position: 'absolute',
     top: 0,
@@ -1209,79 +1247,87 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Welcome Screen
+  // Willkommens-Bildschirm (Aesthetic Typography Manifesto wie in index.html)
   welcomeContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 30,
   },
-  welcomeContent: {
-    alignItems: 'center',
+  aestheticWrapper: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 400,
+    alignSelf: 'center',
   },
-  welcomeIconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
+  aestheticManifesto: {
+    marginBottom: 44,
   },
-  welcomeCircleDark: {
-    backgroundColor: '#FFFFFF',
-  },
-  welcomeCircleLight: {
-    backgroundColor: '#000000',
-  },
-  welcomeTitle: {
-    fontSize: 32,
-    fontWeight: '900',
+  aestheticGreeting: {
+    fontSize: 22,
+    fontStyle: 'italic',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    letterSpacing: -0.2,
     marginBottom: 8,
+  },
+  aestheticGreetingLight: {
+    color: '#71717A',
+  },
+  aestheticGreetingDark: {
+    color: '#A1A1AA',
+  },
+  aestheticQuote: {
+    fontSize: 34,
+    fontWeight: '700',
+    fontStyle: 'italic',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    lineHeight: 42,
     letterSpacing: -0.5,
+    marginBottom: 20,
   },
-  welcomeSubtitle: {
-    fontSize: 16,
-    marginBottom: 32,
+  aestheticSubquote: {
+    fontSize: 17,
+    fontWeight: '500',
+    lineHeight: 25,
+    letterSpacing: -0.2,
+    marginBottom: 8,
   },
-  welcomeFeatureCard: {
-    width: '100%',
-    borderRadius: 24,
-    padding: 22,
-    gap: 16,
-    marginBottom: 36,
+  subquoteLight: {
+    color: '#18181B',
   },
-  welcomeFeatureRow: {
+  subquoteDark: {
+    color: '#F4F4F5',
+  },
+  aestheticTertiary: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  btnStartAesthetic: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-  },
-  welcomeFeatureText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  welcomeStartBtn: {
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 30,
-    alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  welcomeStartBtnDark: {
-    backgroundColor: '#FFFFFF',
-  },
-  welcomeStartBtnLight: {
+  btnStartAestheticLight: {
     backgroundColor: '#000000',
   },
-  welcomeStartText: {
+  btnStartAestheticDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  btnStartAestheticText: {
     fontSize: 17,
     fontWeight: '700',
   },
-  welcomeStartTextDark: {
-    color: '#000000',
-  },
-  welcomeStartTextLight: {
+  btnStartAestheticTextLight: {
     color: '#FFFFFF',
+  },
+  btnStartAestheticTextDark: {
+    color: '#000000',
   },
 });
