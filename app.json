@@ -2,6 +2,7 @@
   "expo": {
     "name": "Muzi To-Do",
     "slug": "muzi-to-do",
+    "scheme": "muzitodo",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
