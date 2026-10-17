@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -273,6 +273,145 @@ export default function App() {
   const [editTitle, setEditTitle] = useState('');
   const [editImages, setEditImages] = useState([]);
   const [editFiles, setEditFiles] = useState([]);
+
+  // Calendar Modal State & Month Swipe Navigation
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const calendarSlideAnim = useRef(new Animated.Value(0)).current;
+  const calendarFadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Month navigation:
+  // delta = -1: Swipe UP -> Letzter Monat
+  // delta = +1: Swipe DOWN -> Nächster Monat
+  const changeMonth = (delta) => {
+    Animated.parallel([
+      Animated.timing(calendarSlideAnim, {
+        toValue: delta < 0 ? -50 : 50,
+        duration: 150,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(calendarFadeAnim, {
+        toValue: 0.15,
+        duration: 130,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+      calendarSlideAnim.setValue(delta < 0 ? 50 : -50);
+      Animated.parallel([
+        Animated.spring(calendarSlideAnim, {
+          toValue: 0,
+          friction: 8,
+          tension: 70,
+          useNativeDriver: true,
+        }),
+        Animated.timing(calendarFadeAnim, {
+          toValue: 1,
+          duration: 170,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
+
+  const calendarPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 14 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy < -35) {
+          // Swipe UP: Letzter Monat per user instruction
+          changeMonth(-1);
+        } else if (gestureState.dy > 35) {
+          // Swipe DOWN: Nächster Monat per user instruction
+          changeMonth(1);
+        }
+      },
+    })
+  ).current;
+
+  const goToToday = () => {
+    const now = new Date();
+    setCalendarDate(now);
+    setSelectedCalendarDate(now);
+  };
+
+  const calendarMonthTitle = useMemo(() => {
+    const formatted = calendarDate.toLocaleDateString('de-DE', {
+      month: 'long',
+      year: 'numeric',
+    });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }, [calendarDate]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    let startDay = firstDay.getDay() - 1; // Mon = 0, Sun = 6
+    if (startDay === -1) startDay = 6;
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const days = [];
+
+    // Prev month padding
+    for (let i = startDay - 1; i >= 0; i--) {
+      const dayNum = daysInPrevMonth - i;
+      const date = new Date(year, month - 1, dayNum);
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      days.push({
+        dayNumber: dayNum,
+        date,
+        dateString,
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      const date = new Date(year, month, i);
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      days.push({
+        dayNumber: i,
+        date,
+        dateString,
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding to fill out 35 or 42 cells
+    const remaining = (7 - (days.length % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+      const date = new Date(year, month + 1, i);
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      days.push({
+        dayNumber: i,
+        date,
+        dateString,
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [calendarDate]);
+
+  const selectedDayString = selectedCalendarDate
+    ? `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, '0')}-${String(selectedCalendarDate.getDate()).padStart(2, '0')}`
+    : null;
+
+  const todayDateObj = new Date();
+  const todayDateString = `${todayDateObj.getFullYear()}-${String(todayDateObj.getMonth() + 1).padStart(2, '0')}-${String(todayDateObj.getDate()).padStart(2, '0')}`;
+
+  const tasksForSelectedDay = useMemo(() => {
+    if (!selectedDayString) return [];
+    return tasks.filter((t) => t.createdAt && t.createdAt.startsWith(selectedDayString));
+  }, [tasks, selectedDayString]);
 
   const textInputRef = useRef(null);
 
@@ -740,9 +879,7 @@ export default function App() {
 
         {/* Calendar Button in Top Right */}
         <TouchableOpacity
-          onPress={() => {
-            // Placeholder: can be extended for calendar view or date filtering
-          }}
+          onPress={() => setShowCalendar(true)}
           style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
           activeOpacity={0.7}
         >
@@ -1268,6 +1405,194 @@ export default function App() {
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* =====================================================================
+          FENSTER 4: Kalender-Ansicht (Kompletter Monat & Wisch-Gesten)
+          ===================================================================== */}
+      <Modal
+        visible={showCalendar}
+        animationType="slide"
+        transparent={false}
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <SafeAreaView style={[styles.calContainer, isDark ? styles.bgDark : styles.bgLight]}>
+          <ExpoStatusBar style={isDark ? 'light' : 'dark'} translucent={true} backgroundColor="transparent" />
+
+          {/* Top Bar */}
+          <View style={styles.calTopBar}>
+            <TouchableOpacity
+              onPress={() => setShowCalendar(false)}
+              style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+              activeOpacity={0.7}
+            >
+              <Feather name="arrow-left" size={22} color={isDark ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+
+            <View style={styles.calTitleGroup}>
+              <Text style={[styles.calMonthTitle, isDark ? styles.textDark : styles.textLight]}>
+                {calendarMonthTitle}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={goToToday}
+              style={[styles.calTodayBtn, isDark ? styles.calTodayDark : styles.calTodayLight]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.calTodayText, isDark ? styles.textDark : styles.textLight]}>
+                Heute
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Swipe Gesture Hint Pill */}
+          <View style={styles.calGestureHintRow}>
+            <View style={[styles.calGesturePill, isDark ? styles.calGesturePillDark : styles.calGesturePillLight]}>
+              <Feather name="arrow-up" size={13} color={isDark ? '#888888' : '#666666'} />
+              <Text style={[styles.calGestureText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                Nach oben: Letzter Monat
+              </Text>
+              <Text style={{ color: isDark ? '#444444' : '#CCCCCC' }}>•</Text>
+              <Text style={[styles.calGestureText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                Nach unten: Nächster
+              </Text>
+              <Feather name="arrow-down" size={13} color={isDark ? '#888888' : '#666666'} />
+            </View>
+          </View>
+
+          {/* Weekday Names Header */}
+          <View style={styles.calWeekdaysRow}>
+            {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((wd, i) => (
+              <View key={i} style={styles.calWeekdayCell}>
+                <Text style={[styles.calWeekdayText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                  {wd}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Entire Month Grid with PanResponder for Vertical Swipe Gestures */}
+          <View style={styles.calGridWrapper} {...calendarPanResponder.panHandlers}>
+            <Animated.View
+              style={[
+                styles.calGrid,
+                {
+                  transform: [{ translateY: calendarSlideAnim }],
+                  opacity: calendarFadeAnim,
+                },
+              ]}
+            >
+              {calendarDays.map((item, idx) => {
+                const isToday = item.dateString === todayDateString;
+                const isSelected = selectedDayString === item.dateString;
+                const hasTask = tasks.some(
+                  (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
+                );
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => setSelectedCalendarDate(item.date)}
+                    style={styles.calDayCell}
+                    activeOpacity={0.65}
+                  >
+                    <View
+                      style={[
+                        styles.calDayCircle,
+                        isToday && (isDark ? styles.calDayTodayDark : styles.calDayTodayLight),
+                        isSelected && !isToday && (isDark ? styles.calDaySelectedDark : styles.calDaySelectedLight),
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.calDayNumber,
+                          isDark ? styles.textDark : styles.textLight,
+                          !item.isCurrentMonth && (isDark ? styles.calDayInactiveDark : styles.calDayInactiveLight),
+                          isToday && (isDark ? styles.calDayTextTodayDark : styles.calDayTextTodayLight),
+                          isSelected && !isToday && (isDark ? styles.textDark : styles.textLight),
+                        ]}
+                      >
+                        {item.dayNumber}
+                      </Text>
+
+                      {/* Small Task Dot */}
+                      {hasTask && (
+                        <View
+                          style={[
+                            styles.calTaskDot,
+                            isToday
+                              ? (isDark ? styles.calDotTodayDark : styles.calDotTodayLight)
+                              : (isDark ? styles.calDotDark : styles.calDotLight),
+                          ]}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </Animated.View>
+          </View>
+
+          {/* Selected Day Task List Preview */}
+          <View style={styles.calTasksSection}>
+            <View style={styles.calTasksSectionHeader}>
+              <Text style={[styles.calTasksSectionTitle, isDark ? styles.textDark : styles.textLight]}>
+                {selectedCalendarDate.toLocaleDateString('de-DE', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </Text>
+              <Text style={[styles.calTasksCountBadge, isDark ? styles.subtextDark : styles.subtextLight]}>
+                {tasksForSelectedDay.length} {tasksForSelectedDay.length === 1 ? 'Aufgabe' : 'Aufgaben'}
+              </Text>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              {tasksForSelectedDay.length === 0 ? (
+                <View style={styles.calEmptyTasksContainer}>
+                  <Text style={[styles.calEmptyText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                    Keine Aufgaben an diesem Tag erstellt
+                  </Text>
+                </View>
+              ) : (
+                tasksForSelectedDay.map((task) => (
+                  <View
+                    key={task.id}
+                    style={[styles.calTaskItemCard, isDark ? styles.cardDark : styles.cardLight]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => toggleTask(task.id)}
+                      style={[
+                        styles.checkbox,
+                        task.completed && (isDark ? styles.checkboxCheckedDark : styles.checkboxCheckedLight),
+                        isDark ? styles.checkboxBorderDark : styles.checkboxBorderLight,
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      {task.completed && (
+                        <Feather name="check" size={14} color={isDark ? '#000000' : '#FFFFFF'} />
+                      )}
+                    </TouchableOpacity>
+
+                    <Text
+                      style={[
+                        styles.calTaskItemTitle,
+                        isDark ? styles.textDark : styles.textLight,
+                        task.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {task.text}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Sidebar (Drawer) with Rounded Corners per user rule */}
@@ -2723,5 +3048,198 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+
+  // Calendar View
+  calContainer: {
+    flex: 1,
+  },
+  calTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  calTitleGroup: {
+    alignItems: 'center',
+  },
+  calMonthTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  calTodayBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  calTodayDark: {
+    backgroundColor: '#161616',
+    borderColor: '#2A2A2A',
+  },
+  calTodayLight: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+  },
+  calTodayText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  calGestureHintRow: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  calGesturePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  calGesturePillDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  calGesturePillLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  calGestureText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  calWeekdaysRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    marginBottom: 6,
+  },
+  calWeekdayCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  calWeekdayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  calGridWrapper: {
+    paddingHorizontal: 14,
+  },
+  calGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calDayCell: {
+    width: '14.285%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  calDayCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  calDayNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  calDayInactiveDark: {
+    color: '#444444',
+  },
+  calDayInactiveLight: {
+    color: '#BBBBBB',
+  },
+  calDayTodayDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  calDayTodayLight: {
+    backgroundColor: '#000000',
+  },
+  calDayTextTodayDark: {
+    color: '#000000',
+    fontWeight: '800',
+  },
+  calDayTextTodayLight: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  calDaySelectedDark: {
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  calDaySelectedLight: {
+    borderWidth: 1.5,
+    borderColor: '#000000',
+  },
+  calTaskDot: {
+    position: 'absolute',
+    bottom: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  calDotDark: {
+    backgroundColor: '#FFFFFF',
+  },
+  calDotLight: {
+    backgroundColor: '#000000',
+  },
+  calDotTodayDark: {
+    backgroundColor: '#000000',
+  },
+  calDotTodayLight: {
+    backgroundColor: '#FFFFFF',
+  },
+  calTasksSection: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.12)',
+    marginTop: 8,
+  },
+  calTasksSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  calTasksSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  calTasksCountBadge: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  calEmptyTasksContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  calEmptyText: {
+    fontSize: 14,
+  },
+  calTaskItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 8,
+    gap: 12,
+  },
+  calTaskItemTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
   },
 });
