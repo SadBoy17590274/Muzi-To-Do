@@ -168,21 +168,6 @@ const SwipeableTask = ({
         ]}
         {...panResponder.panHandlers}
       >
-        {/* Checkbox */}
-        <TouchableOpacity
-          onPress={() => onToggle(item.id)}
-          style={[
-            styles.checkbox,
-            item.completed && (isDark ? styles.checkboxCheckedDark : styles.checkboxCheckedLight),
-            isDark ? styles.checkboxBorderDark : styles.checkboxBorderLight,
-          ]}
-          activeOpacity={0.7}
-        >
-          {item.completed && (
-            <Feather name="check" size={14} color={isDark ? '#000000' : '#FFFFFF'} />
-          )}
-        </TouchableOpacity>
-
         {/* Task Content: Tap opens details, Long Press edits */}
         <TouchableOpacity
           style={styles.taskTextWrapper}
@@ -402,16 +387,21 @@ export default function App() {
     return days;
   }, [calendarDate]);
 
-  const selectedDayString = selectedCalendarDate
-    ? `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, '0')}-${String(selectedCalendarDate.getDate()).padStart(2, '0')}`
-    : null;
+  const getLocalDateString = (dateOrIso) => {
+    if (!dateOrIso) return null;
+    const d = new Date(dateOrIso);
+    if (isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const selectedDayString = selectedCalendarDate ? getLocalDateString(selectedCalendarDate) : null;
 
   const todayDateObj = new Date();
-  const todayDateString = `${todayDateObj.getFullYear()}-${String(todayDateObj.getMonth() + 1).padStart(2, '0')}-${String(todayDateObj.getDate()).padStart(2, '0')}`;
+  const todayDateString = getLocalDateString(todayDateObj);
 
   const tasksForSelectedDay = useMemo(() => {
     if (!selectedDayString) return [];
-    return tasks.filter((t) => t.createdAt && t.createdAt.startsWith(selectedDayString));
+    return tasks.filter((t) => getLocalDateString(t.createdAt) === selectedDayString);
   }, [tasks, selectedDayString]);
 
   // Calendar Day Input Bar State & Handlers (Matches Main Bar)
@@ -551,9 +541,7 @@ export default function App() {
   const handleSelectCalendarDay = (date) => {
     setSelectedCalendarDate(date);
     setShowCalInput(true);
-    setTimeout(() => {
-      calTextInputRef.current?.focus();
-    }, 120);
+    Keyboard.dismiss();
   };
 
   const textInputRef = useRef(null);
@@ -1179,29 +1167,6 @@ export default function App() {
                 Datei
               </Text>
             </TouchableOpacity>
-
-            <View
-              style={[
-                styles.attachMenuDivider,
-                isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
-              ]}
-            />
-
-            <TouchableOpacity
-              onPress={() => {
-                closeAttachMenu();
-                setShowCalendar(true);
-              }}
-              style={styles.attachMenuItem}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
-                <Feather name="calendar" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
-              </View>
-              <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
-                Kalender
-              </Text>
-            </TouchableOpacity>
           </Animated.View>
         )}
 
@@ -1663,7 +1628,7 @@ export default function App() {
                     const isToday = item.dateString === todayDateString;
                     const isSelected = selectedDayString === item.dateString;
                     const hasTask = tasks.some(
-                      (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
+                      (t) => getLocalDateString(t.createdAt) === item.dateString
                     );
 
                     return (
@@ -1731,46 +1696,28 @@ export default function App() {
 
               <ScrollView
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: showCalInput ? 110 : 20 }}
               >
                 {tasksForSelectedDay.length === 0 ? (
                   <View style={styles.calEmptyTasksContainer}>
                     <Text style={[styles.calEmptyText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                      Keine Aufgaben an diesem Tag erstellt
+                      Keine Aufgaben an diesem Tag
                     </Text>
                   </View>
                 ) : (
                   tasksForSelectedDay.map((task) => (
-                    <View
+                    <SwipeableTask
                       key={task.id}
-                      style={[styles.calTaskItemCard, isDark ? styles.cardDark : styles.cardLight]}
-                    >
-                      <TouchableOpacity
-                        onPress={() => toggleTask(task.id)}
-                        style={[
-                          styles.checkbox,
-                          task.completed && (isDark ? styles.checkboxCheckedDark : styles.checkboxCheckedLight),
-                          isDark ? styles.checkboxBorderDark : styles.checkboxBorderLight,
-                        ]}
-                        activeOpacity={0.7}
-                      >
-                        {task.completed && (
-                          <Feather name="check" size={14} color={isDark ? '#000000' : '#FFFFFF'} />
-                        )}
-                      </TouchableOpacity>
-
-                      <Text
-                        style={[
-                          styles.calTaskItemTitle,
-                          isDark ? styles.textDark : styles.textLight,
-                          task.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {task.text}
-                      </Text>
-                    </View>
+                      item={task}
+                      isDark={isDark}
+                      onToggle={toggleTask}
+                      onDelete={deleteTask}
+                      onPressTask={(t) => setSelectedTask(t)}
+                      onLongPressTask={handleLongPressTask}
+                      windowWidth={windowWidth}
+                    />
                   ))
                 )}
               </ScrollView>
@@ -1845,25 +1792,6 @@ export default function App() {
                     </Text>
                   </TouchableOpacity>
 
-                  <View
-                    style={[
-                      styles.attachMenuDivider,
-                      isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
-                    ]}
-                  />
-
-                  <TouchableOpacity
-                    onPress={closeCalAttachMenu}
-                    style={styles.attachMenuItem}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
-                      <Feather name="calendar" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
-                    </View>
-                    <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
-                      Kalender
-                    </Text>
-                  </TouchableOpacity>
                 </Animated.View>
               )}
 
