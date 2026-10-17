@@ -738,8 +738,16 @@ export default function App() {
           </Text>
         </View>
 
-        {/* Right header spacer to balance the menu button and keep title centered */}
-        <View style={{ width: 44, height: 44 }} />
+        {/* Calendar Button in Top Right */}
+        <TouchableOpacity
+          onPress={() => {
+            // Placeholder: can be extended for calendar view or date filtering
+          }}
+          style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+          activeOpacity={0.7}
+        >
+          <Feather name="calendar" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
