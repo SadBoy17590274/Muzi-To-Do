@@ -1462,77 +1462,83 @@ export default function App() {
             </View>
           </View>
 
-          {/* Weekday Names Header */}
-          <View style={styles.calWeekdaysRow}>
-            {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((wd, i) => (
-              <View key={i} style={styles.calWeekdayCell}>
-                <Text style={[styles.calWeekdayText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                  {wd}
-                </Text>
-              </View>
-            ))}
-          </View>
+          {/* Calendar Card Container with rounded corners per app design */}
+          <View style={[styles.calCardContainer, isDark ? styles.calCardDark : styles.calCardLight]}>
+            {/* Weekday Names Header */}
+            <View style={styles.calWeekdaysRow}>
+              {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((wd, i) => (
+                <View key={i} style={styles.calWeekdayCell}>
+                  <Text style={[styles.calWeekdayText, isDark ? styles.calWeekdayDark : styles.calWeekdayLight]}>
+                    {wd}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
-          {/* Entire Month Grid with PanResponder for Vertical Swipe Gestures */}
-          <View style={styles.calGridWrapper} {...calendarPanResponder.panHandlers}>
-            <Animated.View
-              style={[
-                styles.calGrid,
-                {
-                  transform: [{ translateY: calendarSlideAnim }],
-                  opacity: calendarFadeAnim,
-                },
-              ]}
-            >
-              {calendarDays.map((item, idx) => {
-                const isToday = item.dateString === todayDateString;
-                const isSelected = selectedDayString === item.dateString;
-                const hasTask = tasks.some(
-                  (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
-                );
+            {/* Entire Month Grid with PanResponder for Vertical Swipe Gestures */}
+            <View style={styles.calGridWrapper} {...calendarPanResponder.panHandlers}>
+              <Animated.View
+                style={[
+                  styles.calGrid,
+                  {
+                    transform: [{ translateY: calendarSlideAnim }],
+                    opacity: calendarFadeAnim,
+                  },
+                ]}
+              >
+                {calendarDays.map((item, idx) => {
+                  const isToday = item.dateString === todayDateString;
+                  const isSelected = selectedDayString === item.dateString;
+                  const hasTask = tasks.some(
+                    (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
+                  );
 
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => setSelectedCalendarDate(item.date)}
-                    style={styles.calDayCell}
-                    activeOpacity={0.65}
-                  >
-                    <View
-                      style={[
-                        styles.calDayCircle,
-                        isToday && (isDark ? styles.calDayTodayDark : styles.calDayTodayLight),
-                        isSelected && !isToday && (isDark ? styles.calDaySelectedDark : styles.calDaySelectedLight),
-                      ]}
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => setSelectedCalendarDate(item.date)}
+                      style={styles.calDayCell}
+                      activeOpacity={0.7}
                     >
-                      <Text
+                      {/* Day Box with Rounded Corners (Kästchen mit abgerundeten Ecken) */}
+                      <View
                         style={[
-                          styles.calDayNumber,
-                          isDark ? styles.textDark : styles.textLight,
-                          !item.isCurrentMonth && (isDark ? styles.calDayInactiveDark : styles.calDayInactiveLight),
-                          isToday && (isDark ? styles.calDayTextTodayDark : styles.calDayTextTodayLight),
-                          isSelected && !isToday && (isDark ? styles.textDark : styles.textLight),
+                          styles.calDayBox,
+                          isDark ? styles.calDayBoxDark : styles.calDayBoxLight,
+                          !item.isCurrentMonth && (isDark ? styles.calDayBoxInactiveDark : styles.calDayBoxInactiveLight),
+                          isSelected && (isDark ? styles.calDayBoxSelectedDark : styles.calDayBoxSelectedLight),
+                          isToday && (isDark ? styles.calDayBoxTodayDark : styles.calDayBoxTodayLight),
                         ]}
                       >
-                        {item.dayNumber}
-                      </Text>
-
-                      {/* Small Task Dot */}
-                      {hasTask && (
-                        <View
+                        <Text
                           style={[
-                            styles.calTaskDot,
-                            isToday
-                              ? (isDark ? styles.calDotTodayDark : styles.calDotTodayLight)
-                              : (isDark ? styles.calDotDark : styles.calDotLight),
+                            styles.calDayNumber,
+                            isDark ? styles.textDark : styles.textLight,
+                            !item.isCurrentMonth && (isDark ? styles.calDayInactiveDark : styles.calDayInactiveLight),
+                            isSelected && !isToday && (isDark ? styles.textDark : styles.textLight),
+                            isToday && (isDark ? styles.calDayTextTodayDark : styles.calDayTextTodayLight),
                           ]}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </Animated.View>
+                        >
+                          {item.dayNumber}
+                        </Text>
+
+                        {/* Small Task Dot */}
+                        {hasTask && (
+                          <View
+                            style={[
+                              styles.calTaskDot,
+                              isToday
+                                ? (isDark ? styles.calDotTodayDark : styles.calDotTodayLight)
+                                : (isDark ? styles.calDotDark : styles.calDotLight),
+                            ]}
+                          />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+            </View>
           </View>
 
           {/* Selected Day Task List Preview */}
@@ -3110,10 +3116,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  // Calendar Card Container
+  calCardContainer: {
+    marginHorizontal: 16,
+    borderRadius: 26,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  calCardDark: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#222222',
+  },
+  calCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+  },
   calWeekdaysRow: {
     flexDirection: 'row',
-    paddingHorizontal: 14,
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingHorizontal: 2,
   },
   calWeekdayCell: {
     flex: 1,
@@ -3126,8 +3154,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
   },
+  calWeekdayDark: {
+    color: '#777777',
+  },
+  calWeekdayLight: {
+    color: '#8E8E93',
+  },
   calGridWrapper: {
-    paddingHorizontal: 14,
+    width: '100%',
   },
   calGrid: {
     flexDirection: 'row',
@@ -3136,33 +3170,63 @@ const styles = StyleSheet.create({
   calDayCell: {
     width: '14.285%',
     aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 2,
+    padding: 2.5,
   },
-  calDayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  // Day Box / Kästchen mit abgerundeten Ecken
+  calDayBox: {
+    flex: 1,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
+  calDayBoxDark: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  calDayBoxLight: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+  },
+  calDayBoxInactiveDark: {
+    backgroundColor: '#101010',
+    borderColor: '#181818',
+  },
+  calDayBoxInactiveLight: {
+    backgroundColor: '#FAFAFB',
+    borderColor: '#F3F3F4',
+  },
+  calDayBoxTodayDark: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  calDayBoxTodayLight: {
+    backgroundColor: '#000000',
+    borderWidth: 1.5,
+    borderColor: '#000000',
+  },
+  calDayBoxSelectedDark: {
+    backgroundColor: '#262626',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  calDayBoxSelectedLight: {
+    backgroundColor: '#ECECEC',
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
   calDayNumber: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   calDayInactiveDark: {
-    color: '#444444',
+    color: '#3E3E3E',
   },
   calDayInactiveLight: {
-    color: '#BBBBBB',
-  },
-  calDayTodayDark: {
-    backgroundColor: '#FFFFFF',
-  },
-  calDayTodayLight: {
-    backgroundColor: '#000000',
+    color: '#C4C4C4',
   },
   calDayTextTodayDark: {
     color: '#000000',
@@ -3172,17 +3236,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
-  calDaySelectedDark: {
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  calDaySelectedLight: {
-    borderWidth: 1.5,
-    borderColor: '#000000',
-  },
   calTaskDot: {
     position: 'absolute',
-    bottom: 3,
+    bottom: 4,
     width: 4,
     height: 4,
     borderRadius: 2,
