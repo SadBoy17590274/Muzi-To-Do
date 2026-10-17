@@ -733,20 +733,8 @@ export default function App() {
           </Text>
         </View>
 
-        {/* Theme Toggle Button: Icon Only, without Text */}
-        <Animated.View style={{ transform: [{ rotate: themeRotation }, { scale: themeScaleAnim }] }}>
-          <TouchableOpacity
-            onPress={toggleTheme}
-            style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
-            activeOpacity={0.7}
-          >
-            {isDark ? (
-              <Feather name="sun" size={20} color="#FFFFFF" />
-            ) : (
-              <Feather name="moon" size={20} color="#000000" />
-            )}
-          </TouchableOpacity>
-        </Animated.View>
+        {/* Right header spacer to balance the menu button and keep title centered */}
+        <View style={{ width: 44, height: 44 }} />
       </View>
 
       {/* Search Bar */}
@@ -1547,8 +1535,24 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* Sidebar Footer with Clear Completed */}
+        {/* Sidebar Footer with Theme Toggle and Clear Completed */}
         <View style={styles.sidebarFooter}>
+          {/* Theme Toggle Button: ganz unten links */}
+          <Animated.View style={{ transform: [{ rotate: themeRotation }, { scale: themeScaleAnim }] }}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
+              activeOpacity={0.7}
+            >
+              {isDark ? (
+                <Feather name="sun" size={20} color="#FFFFFF" />
+              ) : (
+                <Feather name="moon" size={20} color="#000000" />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Erledigte leeren: rechts neben dem Theme Toggle Button */}
           {completedCount > 0 && (
             <TouchableOpacity
               onPress={clearCompleted}
@@ -2594,14 +2598,19 @@ const styles = StyleSheet.create({
 
   // Sidebar Footer
   sidebarFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingTop: 16,
+    gap: 12,
   },
   clearBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    borderRadius: 22,
     gap: 8,
   },
   clearBtnDark: {
