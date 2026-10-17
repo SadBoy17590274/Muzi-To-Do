@@ -350,6 +350,10 @@ export default function App() {
 
   // Sidebar toggle - softer, graceful spring
   const toggleSidebar = (open) => {
+    if (open) {
+      Keyboard.dismiss();
+      closeAttachMenu();
+    }
     const target = open ? 0 : -sidebarWidth;
     setSidebarOpen(open);
     Animated.spring(sidebarAnim, {
@@ -569,6 +573,7 @@ export default function App() {
   };
 
   const clearCompleted = () => {
+    Keyboard.dismiss();
     setTasks((prev) => prev.filter((t) => !t.completed));
   };
 
@@ -821,6 +826,7 @@ export default function App() {
 
       {/* Bottom Chat Input Bar with Inline Attachments and Floating Action Popover */}
       <Animated.View
+        pointerEvents={sidebarOpen ? 'none' : 'auto'}
         style={[
           styles.bottomBar,
           {
@@ -2423,7 +2429,8 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    zIndex: 99,
+    zIndex: 190,
+    elevation: 190,
   },
 
   // Sidebar with rounded corners per user rule
@@ -2437,12 +2444,12 @@ const styles = StyleSheet.create({
     paddingTop: 44,
     paddingHorizontal: 22,
     paddingBottom: 30,
-    zIndex: 100,
+    zIndex: 200,
     shadowColor: '#000',
     shadowOffset: { width: 6, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
-    elevation: 20,
+    elevation: 200,
   },
   sidebarDark: {
     backgroundColor: '#0A0A0A',
