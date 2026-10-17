@@ -414,14 +414,115 @@ export default function App() {
     return tasks.filter((t) => t.createdAt && t.createdAt.startsWith(selectedDayString));
   }, [tasks, selectedDayString]);
 
-  // Calendar Day Input Bar State & Handlers
+  // Calendar Day Input Bar State & Handlers (Matches Main Bar)
   const [calInputText, setCalInputText] = useState('');
   const [showCalInput, setShowCalInput] = useState(false);
+  const [calAttachedImages, setCalAttachedImages] = useState([]);
+  const [calAttachedFiles, setCalAttachedFiles] = useState([]);
+  const [showCalAttachMenu, setShowCalAttachMenu] = useState(false);
+  const [renderCalAttachMenu, setRenderCalAttachMenu] = useState(false);
+  const calAttachMenuAnim = useRef(new Animated.Value(0)).current;
+  const calPlusRotateAnim = useRef(new Animated.Value(0)).current;
   const calTextInputRef = useRef(null);
+
+  useEffect(() => {
+    if (showCalAttachMenu) {
+      setRenderCalAttachMenu(true);
+      Animated.parallel([
+        Animated.timing(calAttachMenuAnim, {
+          toValue: 1,
+          duration: 280,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(calPlusRotateAnim, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(calAttachMenuAnim, {
+          toValue: 0,
+          duration: 240,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(calPlusRotateAnim, {
+          toValue: 0,
+          duration: 260,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setRenderCalAttachMenu(false);
+        }
+      });
+    }
+  }, [showCalAttachMenu]);
+
+  const calPlusRotation = calPlusRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '135deg'],
+    extrapolate: 'clamp',
+  });
+
+  const toggleCalAttachMenu = () => {
+    setShowCalAttachMenu((prev) => !prev);
+  };
+
+  const closeCalAttachMenu = () => {
+    setShowCalAttachMenu(false);
+  };
+
+  const pickCalImage = async () => {
+    closeCalAttachMenu();
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const picked = result.assets.map((asset) => ({
+          uri: asset.uri,
+          name: asset.fileName || 'Bild',
+        }));
+        setCalAttachedImages((prev) => [...prev, ...picked]);
+      }
+    } finally {
+      calPlusRotateAnim.setValue(0);
+      calAttachMenuAnim.setValue(0);
+    }
+  };
+
+  const pickCalDocument = async () => {
+    closeCalAttachMenu();
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const doc = result.assets[0];
+        setCalAttachedFiles((prev) => [
+          ...prev,
+          { uri: doc.uri, name: doc.name || 'Dokument', size: doc.size },
+        ]);
+      }
+    } finally {
+      calPlusRotateAnim.setValue(0);
+      calAttachMenuAnim.setValue(0);
+    }
+  };
 
   const handleCreateCalendarTask = () => {
     const trimmed = calInputText.trim();
-    if (!trimmed) return;
+    if (!trimmed && calAttachedImages.length === 0 && calAttachedFiles.length === 0) return;
 
     const targetDate = selectedCalendarDate || new Date();
     const taskDate = new Date(
@@ -433,15 +534,18 @@ export default function App() {
 
     const newTask = {
       id: Date.now().toString(),
-      text: trimmed,
+      text: trimmed || (calAttachedImages.length > 0 ? 'Foto-Notiz' : 'Datei-Notiz'),
       completed: false,
       createdAt: taskDate.toISOString(),
-      images: [],
-      files: [],
+      images: calAttachedImages,
+      files: calAttachedFiles,
     };
 
     setTasks((prev) => [newTask, ...prev]);
     setCalInputText('');
+    setCalAttachedImages([]);
+    setCalAttachedFiles([]);
+    closeCalAttachMenu();
   };
 
   const handleSelectCalendarDay = (date) => {
@@ -1509,10 +1613,28 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
+          {/* Outside touchable backdrop to close calendar attach menu */}
+          {showCalAttachMenu && (
+            <TouchableWithoutFeedback
+              onPress={() => {
+                closeCalAttachMenu();
+                Keyboard.dismiss();
+              }}
+            >
+              <View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  {
+                    zIndex: 90,
+                    elevation: 90,
+                    backgroundColor: 'rgba(0,0,0,0.001)',
+                  },
+                ]}
+              />
+            </TouchableWithoutFeedback>
+          )}
+
+          <View style={{ flex: 1 }}>
             {/* Calendar Card Container with rounded corners per app design */}
             <View style={[styles.calCardContainer, isDark ? styles.calCardDark : styles.calCardLight]}>
               {/* Weekday Names Header */}
@@ -1607,7 +1729,11 @@ export default function App() {
                 </Text>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: showCalInput ? 110 : 20 }}
+              >
                 {tasksForSelectedDay.length === 0 ? (
                   <View style={styles.calEmptyTasksContainer}>
                     <Text style={[styles.calEmptyText, isDark ? styles.subtextDark : styles.subtextLight]}>
@@ -1649,56 +1775,212 @@ export default function App() {
                 )}
               </ScrollView>
             </View>
+          </View>
 
-            {/* Calendar Day Input Bar (Appears when day is tapped) */}
-            {showCalInput && (
-              <View style={styles.calBottomBarWrapper}>
-                <View style={[styles.calInputPill, isDark ? styles.calInputPillDark : styles.calInputPillLight]}>
-                  <View style={[styles.calDateBadge, isDark ? styles.calDateBadgeDark : styles.calDateBadgeLight]}>
-                    <Feather name="calendar" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
-                  </View>
+          {/* Bottom Chat Input Bar - EXACT SAME as on the main page */}
+          {showCalInput && (
+            <Animated.View
+              style={[
+                styles.bottomBar,
+                {
+                  transform: [{ translateY: keyboardShift }],
+                },
+              ]}
+            >
+              {/* Floating Attachments Menu Popover right above the bar */}
+              {renderCalAttachMenu && (
+                <Animated.View
+                  style={[
+                    styles.attachMenuPopover,
+                    isDark ? styles.attachMenuDark : styles.attachMenuLight,
+                    {
+                      opacity: calAttachMenuAnim,
+                      transform: [
+                        {
+                          translateY: calAttachMenuAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [12, 0],
+                          }),
+                        },
+                        {
+                          scale: calAttachMenuAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.94, 1],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    onPress={pickCalImage}
+                    style={styles.attachMenuItem}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                      <Feather name="image" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+                    </View>
+                    <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                      Bild
+                    </Text>
+                  </TouchableOpacity>
 
-                  <TextInput
-                    ref={calTextInputRef}
-                    placeholder={`Aufgabe für ${selectedCalendarDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })} schreiben...`}
-                    placeholderTextColor={isDark ? '#777777' : '#999999'}
-                    value={calInputText}
-                    onChangeText={setCalInputText}
-                    onSubmitEditing={handleCreateCalendarTask}
-                    returnKeyType="send"
-                    style={[styles.calTextInput, isDark ? styles.textDark : styles.textLight]}
+                  <View
+                    style={[
+                      styles.attachMenuDivider,
+                      isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
+                    ]}
                   />
 
                   <TouchableOpacity
-                    onPress={handleCreateCalendarTask}
-                    disabled={!calInputText.trim()}
+                    onPress={pickCalDocument}
+                    style={styles.attachMenuItem}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                      <Feather name="paperclip" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+                    </View>
+                    <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                      Datei
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View
                     style={[
-                      styles.addButton,
-                      isDark ? styles.addButtonDark : styles.addButtonLight,
-                      calInputText.trim().length > 0
-                        ? (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight)
-                        : (isDark ? styles.addButtonDisabledDark : styles.addButtonDisabledLight),
+                      styles.attachMenuDivider,
+                      isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
                     ]}
-                    activeOpacity={0.8}
+                  />
+
+                  <TouchableOpacity
+                    onPress={closeCalAttachMenu}
+                    style={styles.attachMenuItem}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                      <Feather name="calendar" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+                    </View>
+                    <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                      Kalender
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
+              {/* Live Attachments Preview directly docked above the text input inside the chat bar */}
+              {(calAttachedImages.length > 0 || calAttachedFiles.length > 0) && (
+                <View style={[styles.chatPreviewBar, isDark ? styles.chatPreviewBarDark : styles.chatPreviewBarLight]}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.chatPreviewScroll}
+                  >
+                    {calAttachedImages.map((img, idx) => (
+                      <View key={`cal-chat-img-${idx}`} style={styles.chatThumbWrapper}>
+                        <Image source={{ uri: img.uri }} style={styles.chatThumbImage} />
+                        <TouchableOpacity
+                          onPress={() => setCalAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
+                          style={styles.chatThumbDelete}
+                          activeOpacity={0.8}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Feather name="x" size={13} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    {calAttachedFiles.map((f, idx) => (
+                      <View
+                        key={`cal-chat-file-${idx}`}
+                        style={[styles.chatFileChip, isDark ? styles.chatFileChipDark : styles.chatFileChipLight]}
+                      >
+                        <Feather name="file" size={14} color={isDark ? '#FFFFFF' : '#000000'} />
+                        <Text
+                          style={[styles.chatFileName, isDark ? styles.textDark : styles.textLight]}
+                          numberOfLines={1}
+                        >
+                          {f.name}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setCalAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Feather name="x" size={13} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* The Chat Input Pill */}
+              <View style={[styles.inputPill, isDark ? styles.inputPillDark : styles.inputPillLight]}>
+                {/* Attachment Toggle Button (+ / X) */}
+                <TouchableOpacity
+                  onPress={toggleCalAttachMenu}
+                  style={[styles.attachToggleBtn, isDark ? styles.attachToggleDark : styles.attachToggleLight]}
+                  activeOpacity={0.7}
+                >
+                  <Animated.View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: [{ rotate: calPlusRotation }],
+                    }}
                   >
                     <Feather
-                      name="arrow-up"
-                      size={20}
-                      color={
-                        calInputText.trim().length > 0
-                          ? isDark
-                            ? '#000000'
-                            : '#FFFFFF'
-                          : isDark
-                          ? '#666666'
-                          : '#AAAAAA'
-                      }
+                      name="plus"
+                      size={22}
+                      color={isDark ? '#FFFFFF' : '#000000'}
                     />
-                  </TouchableOpacity>
-                </View>
+                  </Animated.View>
+                </TouchableOpacity>
+
+                <TextInput
+                  ref={calTextInputRef}
+                  placeholder="Aufgabe schreiben..."
+                  placeholderTextColor={isDark ? '#777777' : '#999999'}
+                  value={calInputText}
+                  onChangeText={setCalInputText}
+                  onFocus={closeCalAttachMenu}
+                  onSubmitEditing={handleCreateCalendarTask}
+                  returnKeyType="send"
+                  style={[styles.textInput, isDark ? styles.textDark : styles.textLight]}
+                />
+
+                {/* Send Button: Always Arrow-Up, solid when content is present */}
+                <TouchableOpacity
+                  onPress={handleCreateCalendarTask}
+                  disabled={!calInputText.trim() && calAttachedImages.length === 0 && calAttachedFiles.length === 0}
+                  style={[
+                    styles.addButton,
+                    isDark ? styles.addButtonDark : styles.addButtonLight,
+                    (calInputText.trim().length > 0 || calAttachedImages.length > 0 || calAttachedFiles.length > 0)
+                      ? (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight)
+                      : (isDark ? styles.addButtonDisabledDark : styles.addButtonDisabledLight),
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <Feather
+                    name="arrow-up"
+                    size={20}
+                    color={
+                      calInputText.trim().length > 0 || calAttachedImages.length > 0 || calAttachedFiles.length > 0
+                        ? isDark
+                          ? '#000000'
+                          : '#FFFFFF'
+                        : isDark
+                        ? '#666666'
+                        : '#AAAAAA'
+                    }
+                  />
+                </TouchableOpacity>
               </View>
-            )}
-          </KeyboardAvoidingView>
+            </Animated.View>
+          )}
         </SafeAreaView>
       </Modal>
 
@@ -3400,42 +3682,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Calendar Day Input Bar
-  calBottomBarWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 14,
-  },
-  calInputPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 30,
-    paddingLeft: 8,
-    paddingRight: 6,
-    height: 56,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  calDateBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calDateBadgeDark: {
-    backgroundColor: '#222222',
-  },
-  calDateBadgeLight: {
-    backgroundColor: '#F0F0F0',
-  },
-  calTextInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
 });
