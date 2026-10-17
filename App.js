@@ -17,6 +17,7 @@ import {
   ScrollView,
   Easing,
   AppState,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -412,6 +413,44 @@ export default function App() {
     if (!selectedDayString) return [];
     return tasks.filter((t) => t.createdAt && t.createdAt.startsWith(selectedDayString));
   }, [tasks, selectedDayString]);
+
+  // Calendar Day Input Bar State & Handlers
+  const [calInputText, setCalInputText] = useState('');
+  const [showCalInput, setShowCalInput] = useState(false);
+  const calTextInputRef = useRef(null);
+
+  const handleCreateCalendarTask = () => {
+    const trimmed = calInputText.trim();
+    if (!trimmed) return;
+
+    const targetDate = selectedCalendarDate || new Date();
+    const taskDate = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      12, 0, 0
+    );
+
+    const newTask = {
+      id: Date.now().toString(),
+      text: trimmed,
+      completed: false,
+      createdAt: taskDate.toISOString(),
+      images: [],
+      files: [],
+    };
+
+    setTasks((prev) => [newTask, ...prev]);
+    setCalInputText('');
+  };
+
+  const handleSelectCalendarDay = (date) => {
+    setSelectedCalendarDate(date);
+    setShowCalInput(true);
+    setTimeout(() => {
+      calTextInputRef.current?.focus();
+    }, 120);
+  };
 
   const textInputRef = useRef(null);
 
@@ -1036,6 +1075,29 @@ export default function App() {
                 Datei
               </Text>
             </TouchableOpacity>
+
+            <View
+              style={[
+                styles.attachMenuDivider,
+                isDark ? styles.attachMenuDividerDark : styles.attachMenuDividerLight,
+              ]}
+            />
+
+            <TouchableOpacity
+              onPress={() => {
+                closeAttachMenu();
+                setShowCalendar(true);
+              }}
+              style={styles.attachMenuItem}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.attachIconCircle, isDark ? styles.attachIconDark : styles.attachIconLight]}>
+                <Feather name="calendar" size={17} color={isDark ? '#000000' : '#FFFFFF'} />
+              </View>
+              <Text style={[styles.attachMenuText, isDark ? styles.textDark : styles.textLight]}>
+                Kalender
+              </Text>
+            </TouchableOpacity>
           </Animated.View>
         )}
 
@@ -1447,157 +1509,196 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
-          {/* Swipe Gesture Hint Pill */}
-          <View style={styles.calGestureHintRow}>
-            <View style={[styles.calGesturePill, isDark ? styles.calGesturePillDark : styles.calGesturePillLight]}>
-              <Feather name="arrow-up" size={13} color={isDark ? '#888888' : '#666666'} />
-              <Text style={[styles.calGestureText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                Nach oben: Letzter Monat
-              </Text>
-              <Text style={{ color: isDark ? '#444444' : '#CCCCCC' }}>•</Text>
-              <Text style={[styles.calGestureText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                Nach unten: Nächster
-              </Text>
-              <Feather name="arrow-down" size={13} color={isDark ? '#888888' : '#666666'} />
-            </View>
-          </View>
-
-          {/* Calendar Card Container with rounded corners per app design */}
-          <View style={[styles.calCardContainer, isDark ? styles.calCardDark : styles.calCardLight]}>
-            {/* Weekday Names Header */}
-            <View style={styles.calWeekdaysRow}>
-              {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((wd, i) => (
-                <View key={i} style={styles.calWeekdayCell}>
-                  <Text style={[styles.calWeekdayText, isDark ? styles.calWeekdayDark : styles.calWeekdayLight]}>
-                    {wd}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Entire Month Grid with PanResponder for Vertical Swipe Gestures */}
-            <View style={styles.calGridWrapper} {...calendarPanResponder.panHandlers}>
-              <Animated.View
-                style={[
-                  styles.calGrid,
-                  {
-                    transform: [{ translateY: calendarSlideAnim }],
-                    opacity: calendarFadeAnim,
-                  },
-                ]}
-              >
-                {calendarDays.map((item, idx) => {
-                  const isToday = item.dateString === todayDateString;
-                  const isSelected = selectedDayString === item.dateString;
-                  const hasTask = tasks.some(
-                    (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
-                  );
-
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => setSelectedCalendarDate(item.date)}
-                      style={styles.calDayCell}
-                      activeOpacity={0.7}
-                    >
-                      {/* Day Box with Rounded Corners (Kästchen mit abgerundeten Ecken) */}
-                      <View
-                        style={[
-                          styles.calDayBox,
-                          isDark ? styles.calDayBoxDark : styles.calDayBoxLight,
-                          !item.isCurrentMonth && (isDark ? styles.calDayBoxInactiveDark : styles.calDayBoxInactiveLight),
-                          isSelected && (isDark ? styles.calDayBoxSelectedDark : styles.calDayBoxSelectedLight),
-                          isToday && (isDark ? styles.calDayBoxTodayDark : styles.calDayBoxTodayLight),
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.calDayNumber,
-                            isDark ? styles.textDark : styles.textLight,
-                            !item.isCurrentMonth && (isDark ? styles.calDayInactiveDark : styles.calDayInactiveLight),
-                            isSelected && !isToday && (isDark ? styles.textDark : styles.textLight),
-                            isToday && (isDark ? styles.calDayTextTodayDark : styles.calDayTextTodayLight),
-                          ]}
-                        >
-                          {item.dayNumber}
-                        </Text>
-
-                        {/* Small Task Dot */}
-                        {hasTask && (
-                          <View
-                            style={[
-                              styles.calTaskDot,
-                              isToday
-                                ? (isDark ? styles.calDotTodayDark : styles.calDotTodayLight)
-                                : (isDark ? styles.calDotDark : styles.calDotLight),
-                            ]}
-                          />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </Animated.View>
-            </View>
-          </View>
-
-          {/* Selected Day Task List Preview */}
-          <View style={styles.calTasksSection}>
-            <View style={styles.calTasksSectionHeader}>
-              <Text style={[styles.calTasksSectionTitle, isDark ? styles.textDark : styles.textLight]}>
-                {selectedCalendarDate.toLocaleDateString('de-DE', {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                })}
-              </Text>
-              <Text style={[styles.calTasksCountBadge, isDark ? styles.subtextDark : styles.subtextLight]}>
-                {tasksForSelectedDay.length} {tasksForSelectedDay.length === 1 ? 'Aufgabe' : 'Aufgaben'}
-              </Text>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-              {tasksForSelectedDay.length === 0 ? (
-                <View style={styles.calEmptyTasksContainer}>
-                  <Text style={[styles.calEmptyText, isDark ? styles.subtextDark : styles.subtextLight]}>
-                    Keine Aufgaben an diesem Tag erstellt
-                  </Text>
-                </View>
-              ) : (
-                tasksForSelectedDay.map((task) => (
-                  <View
-                    key={task.id}
-                    style={[styles.calTaskItemCard, isDark ? styles.cardDark : styles.cardLight]}
-                  >
-                    <TouchableOpacity
-                      onPress={() => toggleTask(task.id)}
-                      style={[
-                        styles.checkbox,
-                        task.completed && (isDark ? styles.checkboxCheckedDark : styles.checkboxCheckedLight),
-                        isDark ? styles.checkboxBorderDark : styles.checkboxBorderLight,
-                      ]}
-                      activeOpacity={0.7}
-                    >
-                      {task.completed && (
-                        <Feather name="check" size={14} color={isDark ? '#000000' : '#FFFFFF'} />
-                      )}
-                    </TouchableOpacity>
-
-                    <Text
-                      style={[
-                        styles.calTaskItemTitle,
-                        isDark ? styles.textDark : styles.textLight,
-                        task.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {task.text}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            {/* Calendar Card Container with rounded corners per app design */}
+            <View style={[styles.calCardContainer, isDark ? styles.calCardDark : styles.calCardLight]}>
+              {/* Weekday Names Header */}
+              <View style={styles.calWeekdaysRow}>
+                {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((wd, i) => (
+                  <View key={i} style={styles.calWeekdayCell}>
+                    <Text style={[styles.calWeekdayText, isDark ? styles.calWeekdayDark : styles.calWeekdayLight]}>
+                      {wd}
                     </Text>
                   </View>
-                ))
-              )}
-            </ScrollView>
-          </View>
+                ))}
+              </View>
+
+              {/* Entire Month Grid with PanResponder for Vertical Swipe Gestures */}
+              <View style={styles.calGridWrapper} {...calendarPanResponder.panHandlers}>
+                <Animated.View
+                  style={[
+                    styles.calGrid,
+                    {
+                      transform: [{ translateY: calendarSlideAnim }],
+                      opacity: calendarFadeAnim,
+                    },
+                  ]}
+                >
+                  {calendarDays.map((item, idx) => {
+                    const isToday = item.dateString === todayDateString;
+                    const isSelected = selectedDayString === item.dateString;
+                    const hasTask = tasks.some(
+                      (t) => t.createdAt && t.createdAt.startsWith(item.dateString)
+                    );
+
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => handleSelectCalendarDay(item.date)}
+                        style={styles.calDayCell}
+                        activeOpacity={0.7}
+                      >
+                        {/* Day Box with Rounded Corners (Kästchen mit abgerundeten Ecken) */}
+                        <View
+                          style={[
+                            styles.calDayBox,
+                            isDark ? styles.calDayBoxDark : styles.calDayBoxLight,
+                            !item.isCurrentMonth && (isDark ? styles.calDayBoxInactiveDark : styles.calDayBoxInactiveLight),
+                            isSelected && (isDark ? styles.calDayBoxSelectedDark : styles.calDayBoxSelectedLight),
+                            isToday && (isDark ? styles.calDayBoxTodayDark : styles.calDayBoxTodayLight),
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.calDayNumber,
+                              isDark ? styles.textDark : styles.textLight,
+                              !item.isCurrentMonth && (isDark ? styles.calDayInactiveDark : styles.calDayInactiveLight),
+                              isSelected && !isToday && (isDark ? styles.textDark : styles.textLight),
+                              isToday && (isDark ? styles.calDayTextTodayDark : styles.calDayTextTodayLight),
+                            ]}
+                          >
+                            {item.dayNumber}
+                          </Text>
+
+                          {/* Small Task Dot */}
+                          {hasTask && (
+                            <View
+                              style={[
+                                styles.calTaskDot,
+                                isToday
+                                  ? (isDark ? styles.calDotTodayDark : styles.calDotTodayLight)
+                                  : (isDark ? styles.calDotDark : styles.calDotLight),
+                              ]}
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Animated.View>
+              </View>
+            </View>
+
+            {/* Selected Day Task List Preview */}
+            <View style={styles.calTasksSection}>
+              <View style={styles.calTasksSectionHeader}>
+                <Text style={[styles.calTasksSectionTitle, isDark ? styles.textDark : styles.textLight]}>
+                  {selectedCalendarDate.toLocaleDateString('de-DE', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </Text>
+                <Text style={[styles.calTasksCountBadge, isDark ? styles.subtextDark : styles.subtextLight]}>
+                  {tasksForSelectedDay.length} {tasksForSelectedDay.length === 1 ? 'Aufgabe' : 'Aufgaben'}
+                </Text>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                {tasksForSelectedDay.length === 0 ? (
+                  <View style={styles.calEmptyTasksContainer}>
+                    <Text style={[styles.calEmptyText, isDark ? styles.subtextDark : styles.subtextLight]}>
+                      Keine Aufgaben an diesem Tag erstellt
+                    </Text>
+                  </View>
+                ) : (
+                  tasksForSelectedDay.map((task) => (
+                    <View
+                      key={task.id}
+                      style={[styles.calTaskItemCard, isDark ? styles.cardDark : styles.cardLight]}
+                    >
+                      <TouchableOpacity
+                        onPress={() => toggleTask(task.id)}
+                        style={[
+                          styles.checkbox,
+                          task.completed && (isDark ? styles.checkboxCheckedDark : styles.checkboxCheckedLight),
+                          isDark ? styles.checkboxBorderDark : styles.checkboxBorderLight,
+                        ]}
+                        activeOpacity={0.7}
+                      >
+                        {task.completed && (
+                          <Feather name="check" size={14} color={isDark ? '#000000' : '#FFFFFF'} />
+                        )}
+                      </TouchableOpacity>
+
+                      <Text
+                        style={[
+                          styles.calTaskItemTitle,
+                          isDark ? styles.textDark : styles.textLight,
+                          task.completed && (isDark ? styles.taskCompletedDark : styles.taskCompletedLight),
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {task.text}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+
+            {/* Calendar Day Input Bar (Appears when day is tapped) */}
+            {showCalInput && (
+              <View style={styles.calBottomBarWrapper}>
+                <View style={[styles.calInputPill, isDark ? styles.calInputPillDark : styles.calInputPillLight]}>
+                  <View style={[styles.calDateBadge, isDark ? styles.calDateBadgeDark : styles.calDateBadgeLight]}>
+                    <Feather name="calendar" size={16} color={isDark ? '#FFFFFF' : '#000000'} />
+                  </View>
+
+                  <TextInput
+                    ref={calTextInputRef}
+                    placeholder={`Aufgabe für ${selectedCalendarDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })} schreiben...`}
+                    placeholderTextColor={isDark ? '#777777' : '#999999'}
+                    value={calInputText}
+                    onChangeText={setCalInputText}
+                    onSubmitEditing={handleCreateCalendarTask}
+                    returnKeyType="send"
+                    style={[styles.calTextInput, isDark ? styles.textDark : styles.textLight]}
+                  />
+
+                  <TouchableOpacity
+                    onPress={handleCreateCalendarTask}
+                    disabled={!calInputText.trim()}
+                    style={[
+                      styles.addButton,
+                      isDark ? styles.addButtonDark : styles.addButtonLight,
+                      calInputText.trim().length > 0
+                        ? (isDark ? styles.addButtonActiveDark : styles.addButtonActiveLight)
+                        : (isDark ? styles.addButtonDisabledDark : styles.addButtonDisabledLight),
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <Feather
+                      name="arrow-up"
+                      size={20}
+                      color={
+                        calInputText.trim().length > 0
+                          ? isDark
+                            ? '#000000'
+                            : '#FFFFFF'
+                          : isDark
+                          ? '#666666'
+                          : '#AAAAAA'
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -3297,5 +3398,44 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     flex: 1,
+  },
+
+  // Calendar Day Input Bar
+  calBottomBarWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 14,
+  },
+  calInputPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 30,
+    paddingLeft: 8,
+    paddingRight: 6,
+    height: 56,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  calDateBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calDateBadgeDark: {
+    backgroundColor: '#222222',
+  },
+  calDateBadgeLight: {
+    backgroundColor: '#F0F0F0',
+  },
+  calTextInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
 });
