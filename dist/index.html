@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>Muzi To-Do</title>
+    
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+
+    <style id="expo-reset">
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: #000000;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Sie müssen JavaScript aktivieren, um diese App auszuführen.
+    </noscript>
+    <div id="root"></div>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('./sw.js').catch(function() {});
+        });
+      }
+    </script>
+    <script src="./_expo/static/js/web/AppEntry-3de3dccae73d0efb11f3636530b52d76.js" defer></script>
+  </body>
+</html>
