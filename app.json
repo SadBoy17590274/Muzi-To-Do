@@ -6,6 +6,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "experiments": {
+      "baseUrl": "/Muzi-To-Do"
+    },
+    "web": {
+      "bundler": "metro"
+    },
     "splash": {
       "backgroundColor": "#000000"
     },

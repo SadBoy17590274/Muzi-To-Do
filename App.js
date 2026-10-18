@@ -19,7 +19,7 @@ import {
   AppState,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -702,8 +702,9 @@ export default function App() {
   });
 
   return (
-    <SafeAreaView style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}>
-      <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FFFFFF'} />
+    <SafeAreaProvider style={{ flex: 1 }}>
+      <SafeAreaView style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}>
+        <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FFFFFF'} />
 
       {/* Top Header */}
       <View style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}>
@@ -1642,6 +1643,7 @@ export default function App() {
         </Animated.View>
       </Modal>
     </SafeAreaView>
+  </SafeAreaProvider>
   );
 }
 

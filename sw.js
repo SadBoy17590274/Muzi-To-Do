@@ -1,4 +1,4 @@
-const CACHE_NAME = 'muzi-todo-cache-v1';
+const CACHE_NAME = 'muzi-todo-cache-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -16,6 +16,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Network first strategy with cache fallback
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
