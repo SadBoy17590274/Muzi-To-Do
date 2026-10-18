@@ -4,20 +4,17 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
-    <meta name="color-scheme" content="only light" />
-    <meta name="supported-color-schemes" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <title>Muzi To-Do</title>
     
     <link rel="manifest" href="/Muzi-To-Do/manifest.json" />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/Muzi-To-Do/icon-192.png" />
 
     <style id="expo-reset">
       :root, html, body, #root, * {
-        color-scheme: only light !important;
-        forced-color-adjust: none !important;
         -webkit-tap-highlight-color: transparent !important;
         -webkit-focus-ring-color: transparent !important;
         outline: none !important;
@@ -33,11 +30,16 @@
         box-shadow: none !important;
         -webkit-tap-highlight-color: transparent !important;
       }
+      :root {
+        color-scheme: light dark;
+      }
       html, body {
         height: 100%;
+        width: 100%;
         margin: 0;
         padding: 0;
-        background-color: #FFFFFF;
+        background-color: #000000;
+        overflow-x: hidden;
       }
       body {
         overflow: hidden;
@@ -47,7 +49,9 @@
       #root {
         display: flex;
         height: 100%;
+        width: 100%;
         flex: 1;
+        background-color: #000000;
       }
     </style>
   </head>
@@ -61,10 +65,10 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=3').catch(function() {});
+          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=4').catch(function() {});
         });
       }
     </script>
-    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-5a3395a725c381f26c6e4ce33f646157.js" defer></script>
+    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-a17c7981854883543fe84d13f60ae797.js" defer></script>
   </body>
 </html>

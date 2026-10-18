@@ -234,7 +234,7 @@ export default function App() {
   const [filter, setFilter] = useState('active'); // 'active' | 'completed' | 'all'
   const [isDark, setIsDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -301,7 +301,7 @@ export default function App() {
   const themeScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Sidebar Slide Animation
-  const sidebarAnim = useRef(new Animated.Value(-400)).current;
+  const sidebarAnim = useRef(new Animated.Value(-600)).current;
 
   // Load Persisted Data
   useEffect(() => {
@@ -309,13 +309,11 @@ export default function App() {
       try {
         const storedTasks = await safeStorage.getItem(STORAGE_KEYS.TASKS);
         const storedTheme = await safeStorage.getItem(STORAGE_KEYS.THEME);
-        const storedWelcome = await safeStorage.getItem(STORAGE_KEYS.WELCOME);
 
         if (storedTasks) setTasks(JSON.parse(storedTasks));
         if (storedTheme) setIsDark(storedTheme === 'dark');
-        if (storedWelcome !== 'seen') {
-          setShowWelcome(true);
-        }
+        // Unconditionally show welcome screen on every app launch per user instruction
+        setShowWelcome(true);
       } catch (err) {
         console.error('Storage error:', err);
       } finally {
@@ -331,36 +329,56 @@ export default function App() {
     }
   }, [tasks, loaded]);
 
-  // Save Theme & Sync Web Status Bar / Body Background
+  // Save Theme & Sync Web Status Bar / Body Background / Color Scheme
   useEffect(() => {
     if (loaded) {
       safeStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
     }
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bg = isDark ? '#000000' : '#FFFFFF';
+      const scheme = isDark ? 'dark' : 'light';
       document.body.style.backgroundColor = bg;
       document.documentElement.style.backgroundColor = bg;
+      document.body.style.colorScheme = scheme;
+      document.documentElement.style.colorScheme = scheme;
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        rootEl.style.backgroundColor = bg;
+        rootEl.style.colorScheme = scheme;
+      }
       const metaTheme = document.querySelector('meta[name="theme-color"]');
       if (metaTheme) {
         metaTheme.setAttribute('content', bg);
       }
+      const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+      if (metaColorScheme) {
+        metaColorScheme.setAttribute('content', scheme);
+      }
     }
   }, [isDark, loaded]);
 
-  // Sidebar toggle - softer, graceful spring
+  // Sidebar toggle - softer, graceful spring, safely moving completely off-screen
   const toggleSidebar = (open) => {
     if (open) {
       Keyboard.dismiss();
       closeAttachMenu();
+      setSidebarOpen(true);
+      Animated.spring(sidebarAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 9,
+        tension: 48,
+      }).start();
+    } else {
+      Animated.spring(sidebarAnim, {
+        toValue: -(sidebarWidth + 100),
+        useNativeDriver: true,
+        friction: 9,
+        tension: 48,
+      }).start(() => {
+        setSidebarOpen(false);
+      });
     }
-    const target = open ? 0 : -sidebarWidth;
-    setSidebarOpen(open);
-    Animated.spring(sidebarAnim, {
-      toValue: target,
-      useNativeDriver: true,
-      friction: 9,
-      tension: 48,
-    }).start();
   };
 
   // Theme Toggle: Smooth, elegant 360° rotation with gentle scale bounce
@@ -715,7 +733,7 @@ export default function App() {
   });
 
   return (
-    <SafeAreaProvider style={{ flex: 1 }}>
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#FFFFFF' }}>
       <SafeAreaView style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}>
         <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FFFFFF'} />
 
@@ -1273,7 +1291,12 @@ export default function App() {
         style={[
           styles.sidebar,
           isDark ? styles.sidebarDark : styles.sidebarLight,
-          { width: sidebarWidth, transform: [{ translateX: sidebarAnim }] },
+          {
+            width: sidebarWidth,
+            transform: [{ translateX: sidebarAnim }],
+            opacity: sidebarOpen ? 1 : 0,
+            pointerEvents: sidebarOpen ? 'auto' : 'none',
+          },
         ]}
       >
         {/* Sidebar Header */}
@@ -1543,20 +1566,23 @@ export default function App() {
 
         {/* Sidebar Footer with Theme Toggle and Clear Completed */}
         <View style={styles.sidebarFooter}>
-          {/* Theme Toggle Button: ganz unten links */}
-          <Animated.View style={{ transform: [{ rotate: themeRotation }, { scale: themeScaleAnim }] }}>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={[styles.iconButton, isDark ? styles.iconButtonDark : styles.iconButtonLight]}
-              activeOpacity={0.7}
-            >
-              {isDark ? (
-                <Feather name="moon" size={20} color="#FFFFFF" />
-              ) : (
-                <Feather name="sun" size={20} color="#000000" />
-              )}
-            </TouchableOpacity>
-          </Animated.View>
+          {/* Theme Toggle Button mit eindeutiger Beschriftung */}
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={[styles.themeToggleBtn, isDark ? styles.themeToggleBtnDark : styles.themeToggleBtnLight]}
+            activeOpacity={0.7}
+          >
+            <Animated.View style={{ transform: [{ rotate: themeRotation }, { scale: themeScaleAnim }] }}>
+              <Feather
+                name={isDark ? 'moon' : 'sun'}
+                size={18}
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
+            </Animated.View>
+            <Text style={[styles.themeToggleText, isDark ? styles.textDark : styles.textLight]}>
+              {isDark ? 'Dunkel' : 'Hell'}
+            </Text>
+          </TouchableOpacity>
 
           {/* Erledigte leeren: rechts neben dem Theme Toggle Button */}
           {completedCount > 0 && (
@@ -1573,84 +1599,84 @@ export default function App() {
           )}
         </View>
       </Animated.View>
-
-      {/* Willkommens-Bildschirm (Full screen, centered, swipe-up to enter, no Modal focus-trap) */}
-      {showWelcome && (
-        <Animated.View
-          style={[
-            styles.welcomeFullScreen,
-            isDark ? styles.bgDark : styles.bgLight,
-            {
-              opacity: welcomeOpacity,
-              transform: [{ translateY: welcomeTranslateY }],
-            },
-          ]}
-          {...welcomePanResponder.panHandlers}
-        >
-          <ExpoStatusBar
-            style={isDark ? 'light' : 'dark'}
-            translucent={true}
-            backgroundColor="transparent"
-          />
-
-          {/* Dummy top spacer for exact optical centering */}
-          <View style={styles.welcomeTopSpacer} />
-
-          {/* Centered Typography in exact middle of screen */}
-          <View style={styles.aestheticCenterWrapper}>
-            <Text
-              style={[
-                styles.aestheticGreeting,
-                isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight,
-              ]}
-            >
-              Willkommen.
-            </Text>
-
-            <Text
-              style={[
-                styles.aestheticQuote,
-                isDark ? styles.textDark : styles.textLight,
-              ]}
-            >
-              „Fokus auf das Wesentliche im täglichen Workflow.“
-            </Text>
-
-            <Text
-              style={[
-                styles.aestheticSubquote,
-                isDark ? styles.subquoteDark : styles.subquoteLight,
-              ]}
-            >
-              Strukturiert, schnelle Erfassung, ohne Überfluss.
-            </Text>
-          </View>
-
-          {/* Elegant Swipe Up Indicator at the bottom */}
-          <TouchableOpacity
-            onPress={dismissWelcome}
-            activeOpacity={0.8}
-            style={styles.swipeUpContainer}
-          >
-            <Animated.View style={{ transform: [{ translateY: chevronBounce }] }}>
-              <Feather
-                name="chevron-up"
-                size={26}
-                color={isDark ? '#888888' : '#777777'}
-              />
-            </Animated.View>
-            <Text
-              style={[
-                styles.swipeUpText,
-                isDark ? styles.subtextDark : styles.subtextLight,
-              ]}
-            >
-              Nach oben wischen
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
     </SafeAreaView>
+
+    {/* Willkommens-Bildschirm (Full screen, covers 100% of viewport edge-to-edge) */}
+    {showWelcome && (
+      <Animated.View
+        style={[
+          styles.welcomeFullScreen,
+          isDark ? styles.bgDark : styles.bgLight,
+          {
+            opacity: welcomeOpacity,
+            transform: [{ translateY: welcomeTranslateY }],
+          },
+        ]}
+        {...welcomePanResponder.panHandlers}
+      >
+        <ExpoStatusBar
+          style={isDark ? 'light' : 'dark'}
+          translucent={true}
+          backgroundColor="transparent"
+        />
+
+        {/* Dummy top spacer for exact optical centering */}
+        <View style={styles.welcomeTopSpacer} />
+
+        {/* Centered Typography in exact middle of screen */}
+        <View style={styles.aestheticCenterWrapper}>
+          <Text
+            style={[
+              styles.aestheticGreeting,
+              isDark ? styles.aestheticGreetingDark : styles.aestheticGreetingLight,
+            ]}
+          >
+            Willkommen.
+          </Text>
+
+          <Text
+            style={[
+              styles.aestheticQuote,
+              isDark ? styles.textDark : styles.textLight,
+            ]}
+          >
+            „Fokus auf das Wesentliche im täglichen Workflow.“
+          </Text>
+
+          <Text
+            style={[
+              styles.aestheticSubquote,
+              isDark ? styles.subquoteDark : styles.subquoteLight,
+            ]}
+          >
+            Strukturiert, schnelle Erfassung, ohne Überfluss.
+          </Text>
+        </View>
+
+        {/* Elegant Swipe Up Indicator at the bottom */}
+        <TouchableOpacity
+          onPress={dismissWelcome}
+          activeOpacity={0.8}
+          style={styles.swipeUpContainer}
+        >
+          <Animated.View style={{ transform: [{ translateY: chevronBounce }] }}>
+            <Feather
+              name="chevron-up"
+              size={26}
+              color={isDark ? '#FFFFFF' : '#000000'}
+            />
+          </Animated.View>
+          <Text
+            style={[
+              styles.swipeUpText,
+              isDark ? styles.swipeUpTextDark : styles.swipeUpTextLight,
+            ]}
+          >
+            Nach oben wischen
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    )}
   </SafeAreaProvider>
   );
 }
@@ -2454,14 +2480,14 @@ const styles = StyleSheet.create({
     elevation: 200,
   },
   sidebarDark: {
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#000000',
     borderRightWidth: 1,
-    borderColor: '#222222',
+    borderColor: '#1A1A1A',
   },
   sidebarLight: {
     backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: '#E5E5E5',
   },
   sidebarHeader: {
     flexDirection: 'row',
@@ -2498,14 +2524,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sidebarCardDark: {
-    backgroundColor: '#141414',
+    backgroundColor: '#111111',
     borderWidth: 1,
-    borderColor: '#242424',
+    borderColor: '#222222',
   },
   sidebarCardLight: {
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#ECECEC',
+    borderColor: '#E5E5E5',
   },
   progressRow: {
     flexDirection: 'row',
@@ -2612,6 +2638,28 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 12,
   },
+  themeToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    gap: 8,
+  },
+  themeToggleBtnDark: {
+    backgroundColor: '#161616',
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  themeToggleBtnLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  themeToggleText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   clearBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -2644,7 +2692,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // Willkommens-Bildschirm (Full screen, centered, swipe-up to enter)
+  // Willkommens-Bildschirm (Full screen, covers 100% of viewport edge-to-edge)
   welcomeFullScreen: {
     position: 'absolute',
     top: 0,
@@ -2654,7 +2702,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 28,
-    zIndex: 999,
+    zIndex: 9999,
+    elevation: 9999,
   },
   welcomeTopSpacer: {
     height: 60,
@@ -2675,10 +2724,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   aestheticGreetingLight: {
-    color: '#71717A',
+    color: '#000000',
+    opacity: 0.6,
   },
   aestheticGreetingDark: {
-    color: '#A1A1AA',
+    color: '#FFFFFF',
+    opacity: 0.6,
   },
   aestheticQuote: {
     fontSize: 32,
@@ -2698,10 +2749,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subquoteLight: {
-    color: '#3F3F46',
+    color: '#000000',
+    opacity: 0.75,
   },
   subquoteDark: {
-    color: '#E4E4E7',
+    color: '#FFFFFF',
+    opacity: 0.75,
   },
 
   // Swipe Up Indicator at the bottom
@@ -2718,5 +2771,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  swipeUpTextLight: {
+    color: '#000000',
+    opacity: 0.6,
+  },
+  swipeUpTextDark: {
+    color: '#FFFFFF',
+    opacity: 0.6,
   },
 });
