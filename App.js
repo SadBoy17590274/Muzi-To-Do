@@ -234,7 +234,7 @@ export default function App() {
   const [filter, setFilter] = useState('active'); // 'active' | 'completed' | 'all'
   const [isDark, setIsDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -309,9 +309,13 @@ export default function App() {
       try {
         const storedTasks = await safeStorage.getItem(STORAGE_KEYS.TASKS);
         const storedTheme = await safeStorage.getItem(STORAGE_KEYS.THEME);
+        const storedWelcome = await safeStorage.getItem(STORAGE_KEYS.WELCOME);
 
         if (storedTasks) setTasks(JSON.parse(storedTasks));
         if (storedTheme) setIsDark(storedTheme === 'dark');
+        if (storedWelcome !== 'seen') {
+          setShowWelcome(true);
+        }
       } catch (err) {
         console.error('Storage error:', err);
       } finally {
@@ -327,10 +331,19 @@ export default function App() {
     }
   }, [tasks, loaded]);
 
-  // Save Theme
+  // Save Theme & Sync Web Status Bar / Body Background
   useEffect(() => {
     if (loaded) {
       safeStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+    }
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const bg = isDark ? '#000000' : '#FFFFFF';
+      document.body.style.backgroundColor = bg;
+      document.documentElement.style.backgroundColor = bg;
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) {
+        metaTheme.setAttribute('content', bg);
+      }
     }
   }, [isDark, loaded]);
 
@@ -627,6 +640,7 @@ export default function App() {
   }, [showWelcome]);
 
   const dismissWelcome = () => {
+    safeStorage.setItem(STORAGE_KEYS.WELCOME, 'seen');
     Animated.parallel([
       Animated.timing(welcomeTranslateY, {
         toValue: -(windowHeight || 800),
@@ -644,7 +658,6 @@ export default function App() {
       setShowWelcome(false);
       welcomeTranslateY.setValue(0);
       welcomeOpacity.setValue(1);
-      // NOTE: Do not auto-focus keyboard so it does not open automatically!
     });
   };
 
@@ -1538,9 +1551,9 @@ export default function App() {
               activeOpacity={0.7}
             >
               {isDark ? (
-                <Feather name="sun" size={20} color="#FFFFFF" />
+                <Feather name="moon" size={20} color="#FFFFFF" />
               ) : (
-                <Feather name="moon" size={20} color="#000000" />
+                <Feather name="sun" size={20} color="#000000" />
               )}
             </TouchableOpacity>
           </Animated.View>
@@ -1561,13 +1574,8 @@ export default function App() {
         </View>
       </Animated.View>
 
-      {/* Willkommens-Bildschirm (Full screen, centered, swipe-up to enter, no top black scrim) */}
-      <Modal
-        visible={showWelcome}
-        transparent={true}
-        statusBarTranslucent={true}
-        animationType="none"
-      >
+      {/* Willkommens-Bildschirm (Full screen, centered, swipe-up to enter, no Modal focus-trap) */}
+      {showWelcome && (
         <Animated.View
           style={[
             styles.welcomeFullScreen,
@@ -1641,7 +1649,7 @@ export default function App() {
             </Text>
           </TouchableOpacity>
         </Animated.View>
-      </Modal>
+      )}
     </SafeAreaView>
   </SafeAreaProvider>
   );
@@ -1658,7 +1666,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   bgLight: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFFFFF',
   },
   textDark: {
     color: '#FFFFFF',
@@ -1679,14 +1687,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 36,
+    paddingTop: Platform.OS === 'web' ? 16 : 36,
     paddingBottom: 14,
   },
   headerDark: {
     backgroundColor: '#000000',
   },
   headerLight: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFFFFF',
   },
   headerTitleContainer: {
     alignItems: 'center',
@@ -1708,6 +1716,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   iconButtonDark: {
     backgroundColor: '#161616',
@@ -1745,6 +1754,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
 
   // List
@@ -2097,6 +2107,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   attachToggleDark: {
     backgroundColor: '#222222',
@@ -2109,6 +2120,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 10,
     paddingHorizontal: 12,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   addButton: {
     width: 44,
@@ -2116,6 +2128,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   addButtonDark: {
     backgroundColor: '#FFFFFF',
@@ -2189,6 +2202,7 @@ const styles = StyleSheet.create({
     padding: 16,
     textAlignVertical: 'top',
     marginBottom: 18,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   sheetInputLight: {
     backgroundColor: '#F7F7F7',
@@ -2697,6 +2711,7 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     paddingTop: 12,
     gap: 4,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   swipeUpText: {
     fontSize: 12,

@@ -3,24 +3,46 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <meta name="supported-color-schemes" content="light" />
     <title>Muzi To-Do</title>
     
     <link rel="manifest" href="/Muzi-To-Do/manifest.json" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#FFFFFF" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="apple-touch-icon" href="/Muzi-To-Do/icon-192.png" />
 
     <style id="expo-reset">
+      :root, html, body, #root, * {
+        color-scheme: only light !important;
+        forced-color-adjust: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        -webkit-focus-ring-color: transparent !important;
+        outline: none !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        outline-color: transparent !important;
+      }
+      *:focus, *:focus-visible, *:active, input:focus, textarea:focus, button:focus, div:focus, [tabindex]:focus {
+        outline: none !important;
+        outline-style: none !important;
+        outline-width: 0 !important;
+        outline-color: transparent !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
       html, body {
         height: 100%;
         margin: 0;
         padding: 0;
-        background-color: #000000;
+        background-color: #FFFFFF;
       }
       body {
         overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
       }
       #root {
         display: flex;
@@ -39,10 +61,10 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=2').catch(function() {});
+          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=3').catch(function() {});
         });
       }
     </script>
-    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-acc109e6c2bd5f48691e5075b21273cb.js" defer></script>
+    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-5a3395a725c381f26c6e4ce33f646157.js" defer></script>
   </body>
 </html>
