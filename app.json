@@ -13,6 +13,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.muzi.todo",
       "adaptiveIcon": {
         "backgroundColor": "#000000"
       }
