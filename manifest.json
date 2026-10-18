@@ -1,25 +1,40 @@
 {
+  "id": "muzi-to-do",
   "name": "Muzi To-Do",
   "short_name": "Muzi",
   "description": "Minimalistische To-Do App mit rundem UI",
+  "lang": "de",
   "start_url": "/Muzi-To-Do/",
   "scope": "/Muzi-To-Do/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/Muzi-To-Do/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/Muzi-To-Do/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/Muzi-To-Do/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/Muzi-To-Do/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
