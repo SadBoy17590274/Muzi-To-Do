@@ -28,7 +28,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 const STORAGE_KEYS = {
   TASKS: '@muzi_tasks_v1',
-  THEME: '@muzi_theme_v1',
+  THEME: '@muzi_theme_v2',
   WELCOME: '@muzi_welcome_v1',
 };
 
@@ -312,7 +312,7 @@ export default function App() {
   const themeScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Sidebar Slide Animation
-  const sidebarAnim = useRef(new Animated.Value(-600)).current;
+  const sidebarAnim = useRef(new Animated.Value(-1000)).current;
 
   // Load Persisted Data
   useEffect(() => {
@@ -344,25 +344,27 @@ export default function App() {
     }
   }, [tasks, loaded]);
 
-  // Save Theme & Sync Web Status Bar / Body Background / Color Scheme
+  // Save Theme & Sync Web Status Bar / Body Background
+  // IMPORTANT: Always keep CSS/meta color-scheme as 'dark' so Chromium / Samsung Internet
+  // never activates its Force Dark paint filter (which inverts #FFFFFF to #1F1F1F grey).
   useEffect(() => {
     if (loaded) {
       safeStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
     }
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bg = isDark ? '#000000' : '#FFFFFF';
-      const scheme = isDark ? 'dark' : 'light';
-      document.documentElement.className = scheme;
-      document.body.className = scheme;
+      const themeClass = isDark ? 'dark' : 'light';
+      document.documentElement.className = themeClass;
+      document.body.className = themeClass;
       document.body.style.backgroundColor = bg;
       document.documentElement.style.backgroundColor = bg;
-      document.body.style.colorScheme = scheme;
-      document.documentElement.style.colorScheme = scheme;
+      document.body.style.colorScheme = 'dark';
+      document.documentElement.style.colorScheme = 'dark';
       const rootEl = document.getElementById('root');
       if (rootEl) {
-        rootEl.className = scheme;
+        rootEl.className = themeClass;
         rootEl.style.backgroundColor = bg;
-        rootEl.style.colorScheme = scheme;
+        rootEl.style.colorScheme = 'dark';
       }
       const metaTheme = document.querySelector('meta[name="theme-color"]');
       if (metaTheme) {
@@ -370,32 +372,33 @@ export default function App() {
       }
       const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
       if (metaColorScheme) {
-        metaColorScheme.setAttribute('content', scheme);
+        metaColorScheme.setAttribute('content', 'dark');
       }
     }
   }, [isDark, loaded]);
 
-  // Sidebar toggle - softer, graceful spring, safely moving completely off-screen
+  // Sidebar toggle - immediate backdrop unmount on close so UI never stays darkened or frozen
   const toggleSidebar = (open) => {
     if (open) {
       Keyboard.dismiss();
       closeAttachMenu();
       setSidebarOpen(true);
-      Animated.spring(sidebarAnim, {
+      sidebarAnim.stopAnimation();
+      Animated.timing(sidebarAnim, {
         toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-        friction: 9,
-        tension: 48,
       }).start();
     } else {
-      Animated.spring(sidebarAnim, {
+      setSidebarOpen(false);
+      sidebarAnim.stopAnimation();
+      Animated.timing(sidebarAnim, {
         toValue: -(sidebarWidth + 100),
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-        friction: 9,
-        tension: 48,
-      }).start(() => {
-        setSidebarOpen(false);
-      });
+      }).start();
     }
   };
 
@@ -1315,7 +1318,11 @@ export default function App() {
           {
             width: sidebarWidth,
             transform: [{ translateX: sidebarAnim }],
-            opacity: sidebarOpen ? 1 : 0,
+            opacity: sidebarAnim.interpolate({
+              inputRange: [-(sidebarWidth + 100), -(sidebarWidth + 30), 0],
+              outputRange: [0, 1, 1],
+              extrapolate: 'clamp',
+            }),
             pointerEvents: sidebarOpen ? 'auto' : 'none',
           },
         ]}
@@ -1942,9 +1949,9 @@ const styles = StyleSheet.create({
     borderColor: '#333333',
   },
   inlineFileLight: {
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E5E5E5',
   },
 
   // Empty state
@@ -2105,9 +2112,9 @@ const styles = StyleSheet.create({
     borderColor: '#333333',
   },
   chatFileChipLight: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E5E5E5',
   },
   chatFileName: {
     fontSize: 13,
@@ -2160,7 +2167,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#222222',
   },
   attachToggleLight: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   textInput: {
     flex: 1,
@@ -2198,9 +2207,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   addButtonDisabledLight: {
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EAEAEA',
+    borderColor: '#E5E5E5',
     opacity: 0.6,
   },
 
@@ -2252,10 +2261,10 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   sheetInputLight: {
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#FFFFFF',
     color: '#000000',
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: '#E5E5E5',
   },
   sheetInputDark: {
     backgroundColor: '#161616',
@@ -2278,9 +2287,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   attachBtnLight: {
-    backgroundColor: '#F4F4F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
+    borderColor: '#E5E5E5',
   },
   attachBtnDark: {
     backgroundColor: '#18181B',
@@ -2329,9 +2338,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   fileItemLight: {
-    backgroundColor: '#F4F4F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
+    borderColor: '#E5E5E5',
   },
   fileItemDark: {
     backgroundColor: '#18181B',
@@ -2460,9 +2469,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailActionLight: {
-    backgroundColor: '#F4F4F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4E4E7',
+    borderColor: '#E5E5E5',
   },
   detailActionDark: {
     backgroundColor: '#1A1A1A',
@@ -2578,7 +2587,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#262626',
   },
   progressTrackLight: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E5E5E5',
   },
   progressBarFill: {
     height: '100%',
@@ -2633,13 +2642,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1E1E',
   },
   navBadgeLight: {
-    backgroundColor: '#EFEFEF',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   navBadgeActiveDark: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
   },
   navBadgeActiveLight: {
-    backgroundColor: '#262626',
+    backgroundColor: '#000000',
   },
   navBadgeText: {
     fontSize: 13,

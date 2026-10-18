@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="dark" />
     <title>Muzi To-Do</title>
     
     <link rel="manifest" href="/Muzi-To-Do/manifest.json" />
@@ -21,6 +21,8 @@
         outline-style: none !important;
         outline-width: 0 !important;
         outline-color: transparent !important;
+        color-scheme: only dark !important;
+        forced-color-adjust: none !important;
       }
       *:focus, *:focus-visible, *:active, input:focus, textarea:focus, button:focus, div:focus, [tabindex]:focus {
         outline: none !important;
@@ -30,20 +32,31 @@
         box-shadow: none !important;
         -webkit-tap-highlight-color: transparent !important;
       }
-      :root {
-        color-scheme: light dark;
+      @media (prefers-color-scheme: dark) {
+        :root, html, body {
+          color-scheme: only dark !important;
+          forced-color-adjust: none !important;
+        }
       }
       html.light, body.light, html.light #root {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        color-scheme: light !important;
+        color-scheme: only dark !important;
         forced-color-adjust: none !important;
+      }
+      html.light input, html.light textarea {
+        caret-color: #000000 !important;
+        color: #000000 !important;
       }
       html.dark, body.dark, html.dark #root {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        color-scheme: dark !important;
+        color-scheme: only dark !important;
         forced-color-adjust: none !important;
+      }
+      html.dark input, html.dark textarea {
+        caret-color: #FFFFFF !important;
+        color: #FFFFFF !important;
       }
       html, body {
         position: fixed;
@@ -53,8 +66,10 @@
         bottom: 0;
         width: 100%;
         height: 100%;
+        min-height: 100dvh;
         margin: 0;
         padding: 0;
+        border: 0;
         overflow: hidden;
         overscroll-behavior: none;
         background-color: #000000;
@@ -70,6 +85,10 @@
         bottom: 0;
         width: 100%;
         height: 100%;
+        min-height: 100dvh;
+        margin: 0;
+        padding: 0;
+        border: 0;
         overflow: hidden;
         flex: 1;
         background-color: #000000;
@@ -77,19 +96,19 @@
     </style>
   </head>
 
-  <body>
+  <body class="dark">
     <noscript>
       Sie müssen JavaScript aktivieren, um diese App auszuführen.
     </noscript>
-    <div id="root"></div>
+    <div id="root" class="dark"></div>
 
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=6').catch(function() {});
+          navigator.serviceWorker.register('/Muzi-To-Do/sw.js?v=7').catch(function() {});
         });
       }
     </script>
-    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-99ab887de648e798938ddf408a278e87.js" defer></script>
+    <script src="/Muzi-To-Do/_expo/static/js/web/AppEntry-5b32c4ac963ca2e87282e8fd233cb112.js" defer></script>
   </body>
 </html>

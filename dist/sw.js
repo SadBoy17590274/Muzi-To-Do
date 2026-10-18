@@ -1,4 +1,4 @@
-const CACHE_NAME = 'muzi-todo-cache-v6';
+const CACHE_NAME = 'muzi-todo-cache-v7';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

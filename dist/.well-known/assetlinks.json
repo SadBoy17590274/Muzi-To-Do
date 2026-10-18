@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "io.github.sadboy17590274.twa",
-        "sha256_cert_fingerprints": ["25:62:A8:4E:09:95:78:3D:F8:E4:49:CB:30:9C:E0:CC:9B:02:5C:9A:5C:C1:1C:DF:CE:4B:5D:FE:85:96:C0:DC"]
-      }
-    }]
