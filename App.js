@@ -266,6 +266,17 @@ export default function App() {
   const keyboardShift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // On Web, the viewport resizes automatically with interactive-widget=resizes-content.
+    // Double-shifting on web pushes the UI into the void, so we only track isKeyboardOpen on web.
+    if (Platform.OS === 'web') {
+      const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardOpen(true));
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardOpen(false));
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }
+
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
@@ -337,12 +348,15 @@ export default function App() {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const bg = isDark ? '#000000' : '#FFFFFF';
       const scheme = isDark ? 'dark' : 'light';
+      document.documentElement.className = scheme;
+      document.body.className = scheme;
       document.body.style.backgroundColor = bg;
       document.documentElement.style.backgroundColor = bg;
       document.body.style.colorScheme = scheme;
       document.documentElement.style.colorScheme = scheme;
       const rootEl = document.getElementById('root');
       if (rootEl) {
+        rootEl.className = scheme;
         rootEl.style.backgroundColor = bg;
         rootEl.style.colorScheme = scheme;
       }
@@ -734,8 +748,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#FFFFFF' }}>
-      <SafeAreaView style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}>
-        <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={isDark ? '#000000' : '#FFFFFF'} />
+      <SafeAreaView
+        style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}
+        edges={['top', 'left', 'right', 'bottom']}
+      >
+        <ExpoStatusBar style={isDark ? 'light' : 'dark'} translucent={true} backgroundColor="transparent" />
 
       {/* Top Header */}
       <View style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}>
@@ -799,7 +816,7 @@ export default function App() {
             )}
             contentContainerStyle={[
               styles.listContent,
-              isKeyboardOpen && { paddingBottom: 380 },
+              isKeyboardOpen && { paddingBottom: 90 },
             ]}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -1713,7 +1730,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'web' ? 16 : 36,
+    paddingTop: Platform.OS === 'web' ? 22 : 36,
     paddingBottom: 14,
   },
   headerDark: {
