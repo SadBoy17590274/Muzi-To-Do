@@ -232,7 +232,7 @@ export default function App() {
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('active'); // 'active' | 'completed' | 'all'
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -322,7 +322,11 @@ export default function App() {
         const storedTheme = await safeStorage.getItem(STORAGE_KEYS.THEME);
 
         if (storedTasks) setTasks(JSON.parse(storedTasks));
-        if (storedTheme) setIsDark(storedTheme === 'dark');
+        if (storedTheme) {
+          setIsDark(storedTheme === 'dark');
+        } else {
+          setIsDark(true);
+        }
         // Unconditionally show welcome screen on every app launch per user instruction
         setShowWelcome(true);
       } catch (err) {
@@ -747,9 +751,9 @@ export default function App() {
   });
 
   return (
-    <SafeAreaProvider style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#FFFFFF' }}>
+    <SafeAreaProvider style={{ flex: 1, width: '100%', height: '100%', backgroundColor: isDark ? '#000000' : '#FFFFFF' }}>
       <SafeAreaView
-        style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight]}
+        style={[styles.safeArea, isDark ? styles.bgDark : styles.bgLight, { width: '100%', height: '100%' }]}
         edges={['top', 'left', 'right', 'bottom']}
       >
         <ExpoStatusBar style={isDark ? 'light' : 'dark'} translucent={true} backgroundColor="transparent" />
@@ -2716,6 +2720,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    width: '100%',
+    height: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 28,
